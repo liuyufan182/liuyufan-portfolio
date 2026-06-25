@@ -1,0 +1,2137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LIU YUFAN — AIGC Visual Designer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Inter:wght@200;300;400;500&family=Noto+Sans+SC:wght@200;300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+/* ============================================
+   RESET & BASE
+   ============================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-primary: #0B0B0B;
+  --bg-secondary: #111111;
+  --bg-tertiary: #161616;
+  --text-primary: #F5F2EA;
+  --text-secondary: rgba(245, 242, 234, 0.6);
+  --text-muted: rgba(245, 242, 234, 0.35);
+  --accent: #C7A56A;
+  --accent-dim: rgba(199, 165, 106, 0.15);
+  --border: rgba(245, 242, 234, 0.08);
+  --border-light: rgba(245, 242, 234, 0.15);
+  --font-display: 'Cormorant Garamond', 'Georgia', serif;
+  --font-body: 'Inter', 'Noto Sans SC', -apple-system, sans-serif;
+  --font-cn: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-weight: 300;
+  line-height: 1.6;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+a { color: inherit; text-decoration: none; cursor: none; }
+button { cursor: none; }
+img, video { display: block; max-width: 100%; }
+::selection { background: var(--accent); color: var(--bg-primary); }
+
+/* ============================================
+   CUSTOM CURSOR
+   ============================================ */
+.cursor {
+  position: fixed;
+  top: 0; left: 0;
+  width: 20px; height: 20px;
+  border: 1px solid var(--text-primary);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 10000;
+  transition: width 0.4s var(--ease-out), height 0.4s var(--ease-out),
+              border-color 0.4s ease, background 0.4s ease, opacity 0.3s ease;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: difference;
+}
+
+.cursor.hover {
+  width: 60px; height: 60px;
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+}
+
+.cursor-dot {
+  position: fixed;
+  top: 0; left: 0;
+  width: 4px; height: 4px;
+  background: var(--accent);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 10001;
+  transform: translate(-50%, -50%);
+}
+
+@media (pointer: coarse) {
+  .cursor, .cursor-dot { display: none; }
+  body, a, button { cursor: auto; }
+}
+
+/* ============================================
+   FILM GRAIN OVERLAY
+   ============================================ */
+.grain {
+  position: fixed;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  animation: grainShift 0.5s steps(1) infinite;
+}
+
+@keyframes grainShift {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-2%, -3%); }
+  40% { transform: translate(3%, 1%); }
+  60% { transform: translate(-1%, 3%); }
+  80% { transform: translate(2%, -2%); }
+  100% { transform: translate(0, 0); }
+}
+
+/* ============================================
+   LOADING SCREEN
+   ============================================ */
+.loader {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-primary);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  transition: opacity 0.8s var(--ease-out), visibility 0.8s;
+}
+
+.loader.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.loader-text {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 300;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  opacity: 0;
+  animation: loaderFade 1.5s ease forwards;
+}
+
+.loader-line {
+  width: 60px;
+  height: 1px;
+  background: var(--accent);
+  margin-top: 24px;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: loaderLine 1.5s var(--ease-out) 0.3s forwards;
+}
+
+@keyframes loaderFade {
+  0% { opacity: 0; transform: translateY(10px); }
+  50% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 1; }
+}
+
+@keyframes loaderLine {
+  to { transform: scaleX(1); }
+}
+
+/* ============================================
+   NAVIGATION
+   ============================================ */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  padding: 32px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1000;
+  mix-blend-mode: difference;
+  transition: opacity 0.5s ease;
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.nav-links {
+  display: flex;
+  gap: 40px;
+  list-style: none;
+}
+
+.nav-links a {
+  font-size: 0.7rem;
+  font-weight: 300;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  position: relative;
+  padding-bottom: 2px;
+}
+
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.5s var(--ease-out);
+}
+
+.nav-links a:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* Mobile menu */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  width: 28px;
+  height: 20px;
+  position: relative;
+  z-index: 1001;
+}
+
+.nav-toggle span {
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: var(--text-primary);
+  position: absolute;
+  left: 0;
+  transition: all 0.4s var(--ease-out);
+}
+
+.nav-toggle span:first-child { top: 0; }
+.nav-toggle span:last-child { bottom: 0; }
+
+.nav-toggle.active span:first-child {
+  top: 50%;
+  transform: rotate(45deg);
+}
+
+.nav-toggle.active span:last-child {
+  bottom: 50%;
+  transform: rotate(-45deg);
+}
+
+/* ============================================
+   HERO SECTION — VIDEO BACKGROUND
+   ============================================ */
+.hero {
+  position: relative;
+  height: 100vh;
+  min-height: 700px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(11,11,11,0.3) 0%,
+    rgba(11,11,11,0.1) 30%,
+    rgba(11,11,11,0.4) 70%,
+    rgba(11,11,11,0.95) 100%
+  );
+  z-index: 1;
+}
+
+.hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.05);
+  animation: heroZoom 20s var(--ease-out) forwards;
+}
+
+@keyframes heroZoom {
+  to { transform: scale(1); }
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.hero-name {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 7.5rem);
+  font-weight: 300;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-bottom: 20px;
+  opacity: 0;
+  transform: translateY(40px);
+  animation: fadeUp 1.2s var(--ease-out) 1.8s forwards;
+}
+
+.hero-title {
+  font-size: 0.7rem;
+  font-weight: 300;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 40px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 1s var(--ease-out) 2.2s forwards;
+}
+
+.hero-divider {
+  width: 40px;
+  height: 1px;
+  background: var(--accent);
+  margin: 0 auto 36px;
+  opacity: 0;
+  transform: scaleX(0);
+  animation: fadeUp 1s var(--ease-out) 2.4s forwards;
+}
+
+.hero-services {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+  flex-wrap: wrap;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 1s var(--ease-out) 2.6s forwards;
+}
+
+.hero-services span {
+  font-size: 0.65rem;
+  font-weight: 300;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.hero-scroll {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  text-align: center;
+  opacity: 0;
+  animation: fadeUp 1s var(--ease-out) 3s forwards;
+}
+
+.hero-scroll span {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 300;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 48px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.scroll-line::after {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, transparent, var(--accent));
+  animation: scrollDown 2s ease-in-out infinite;
+}
+
+@keyframes scrollDown {
+  0% { top: -100%; }
+  100% { top: 100%; }
+}
+
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0) scaleX(1); }
+}
+
+/* ============================================
+   SELECTED WORKS — STATEMENT
+   ============================================ */
+.statement {
+  padding: 160px 48px 120px;
+  position: relative;
+  overflow: hidden;
+}
+
+.statement-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 60px;
+}
+
+.statement-title {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 12vw, 11rem);
+  font-weight: 300;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.statement-title em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.statement-meta {
+  text-align: right;
+  flex-shrink: 0;
+  padding-bottom: 16px;
+}
+
+.statement-meta span {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 300;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  line-height: 2;
+}
+
+.statement-line {
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+  margin-top: 60px;
+}
+
+/* ============================================
+   PORTFOLIO SECTION
+   ============================================ */
+.portfolio {
+  padding: 80px 48px 160px;
+}
+
+.portfolio-header {
+  max-width: 1400px;
+  margin: 0 auto 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.portfolio-filter {
+  display: flex;
+  gap: 28px;
+}
+
+.filter-btn {
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 300;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 0;
+  position: relative;
+  transition: color 0.4s ease;
+}
+
+.filter-btn:hover, .filter-btn.active {
+  color: var(--text-primary);
+}
+
+.filter-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--accent);
+}
+
+.portfolio-count {
+  font-size: 0.65rem;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  color: var(--text-muted);
+}
+
+/* Masonry Grid */
+.masonry {
+  max-width: 1400px;
+  margin: 0 auto;
+  columns: 3;
+  column-gap: 24px;
+}
+
+.masonry-item {
+  break-inside: avoid;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+  cursor: none;
+}
+
+.masonry-item img,
+.masonry-item video {
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: transform 0.8s var(--ease-out);
+}
+
+.masonry-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(11,11,11,0.9) 100%);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 32px;
+}
+
+.masonry-item:hover img,
+.masonry-item:hover video {
+  transform: scale(1.05);
+}
+
+.masonry-item:hover .masonry-overlay {
+  opacity: 1;
+}
+
+.masonry-overlay h3 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.masonry-overlay .meta {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.masonry-overlay .meta span {
+  font-size: 0.6rem;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.masonry-overlay .meta .dot {
+  width: 3px; height: 3px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+
+/* Video play icon overlay */
+.masonry-item .play-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  border: 2px solid rgba(245,242,234,0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  pointer-events: none;
+  transition: all 0.4s ease;
+}
+
+.masonry-item .play-icon::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 8px 0 8px 14px;
+  border-color: transparent transparent transparent rgba(245,242,234,0.8);
+  margin-left: 3px;
+}
+
+.masonry-item:hover .play-icon {
+  border-color: var(--accent);
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.masonry-item:hover .play-icon::after {
+  border-color: transparent transparent transparent var(--accent);
+}
+
+/* ============================================
+   MARQUEE
+   ============================================ */
+.marquee-section {
+  padding: 100px 0;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.marquee-track {
+  display: flex;
+  white-space: nowrap;
+  animation: marquee 30s linear infinite;
+}
+
+.marquee-text {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 7vw, 6rem);
+  font-weight: 300;
+  font-style: italic;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding-right: 80px;
+  flex-shrink: 0;
+}
+
+.marquee-text .accent {
+  color: var(--accent);
+  font-style: normal;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ============================================
+   ABOUT SECTION
+   ============================================ */
+.about {
+  padding: 160px 48px;
+}
+
+.about-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 100px;
+  align-items: start;
+}
+
+.about-label {
+  font-size: 0.6rem;
+  font-weight: 300;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 32px;
+}
+
+.about-heading {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 4vw, 4rem);
+  font-weight: 300;
+  line-height: 1.15;
+  margin-bottom: 40px;
+}
+
+.about-heading em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.about-text {
+  font-size: 0.85rem;
+  font-weight: 300;
+  line-height: 1.9;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.about-right {
+  padding-top: 20px;
+}
+
+.about-section {
+  margin-bottom: 56px;
+}
+
+.about-section-title {
+  font-size: 0.6rem;
+  font-weight: 300;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.about-list {
+  list-style: none;
+}
+
+.about-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 300;
+  color: var(--text-secondary);
+}
+
+.about-list li span:last-child {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+.skills-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skill-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 18px 16px 14px;
+  border: 1px solid var(--border-light);
+  transition: all 0.4s ease;
+  min-width: 80px;
+}
+
+.skill-icon:hover {
+  border-color: var(--accent);
+}
+
+.skill-icon:hover img {
+  filter: brightness(1.3);
+}
+
+.skill-icon:hover .skill-label {
+  color: var(--accent);
+}
+
+.skill-icon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  transition: filter 0.4s ease;
+}
+
+.skill-label {
+  font-size: 0.55rem;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: color 0.4s ease;
+}
+
+/* ============================================
+   CONTACT / FOOTER
+   ============================================ */
+.contact {
+  padding: 160px 48px 80px;
+  border-top: 1px solid var(--border);
+}
+
+.contact-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.contact-label {
+  font-size: 0.6rem;
+  font-weight: 300;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 40px;
+}
+
+.contact-heading {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 5rem);
+  font-weight: 300;
+  line-height: 1.15;
+  margin-bottom: 20px;
+}
+
+.contact-heading em {
+  font-style: italic;
+}
+
+.contact-email {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 300;
+  letter-spacing: 0.15em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 4px;
+  transition: all 0.4s ease;
+  margin-bottom: 60px;
+}
+
+.contact-email:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.contact-socials {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  margin-bottom: 80px;
+}
+
+.contact-socials a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.65rem;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition: color 0.4s ease;
+}
+
+.contact-socials a i {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  transition: color 0.4s ease;
+  width: 18px;
+  text-align: center;
+}
+
+.contact-socials a:hover {
+  color: var(--accent);
+}
+
+.contact-socials a:hover i {
+  color: var(--accent);
+}
+
+.footer {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-top: 40px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer span {
+  font-size: 0.6rem;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  color: var(--text-muted);
+}
+
+/* ============================================
+   PROJECT DETAIL MODAL
+   ============================================ */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: var(--bg-primary);
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.7s var(--ease-out);
+}
+
+.modal.active {
+  transform: translateY(0);
+}
+
+.modal-close {
+  position: fixed;
+  top: 32px; right: 48px;
+  z-index: 5001;
+  background: none;
+  border: 1px solid var(--border-light);
+  width: 48px; height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 300;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+  transition: all 0.4s ease;
+}
+
+.modal-close:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* FIXED: modal cover — no object-fit:cover, height:auto, preserve aspect ratio */
+.modal-cover-img,
+.modal-cover-video {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  opacity: 0.8;
+  display: block;
+}
+
+.modal-body {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 80px 48px 120px;
+}
+
+.modal-category {
+  font-size: 0.6rem;
+  font-weight: 300;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 20px;
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 300;
+  line-height: 1.15;
+  margin-bottom: 12px;
+}
+
+.modal-year {
+  font-size: 0.7rem;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  color: var(--text-muted);
+  margin-bottom: 48px;
+}
+
+.modal-section {
+  margin-bottom: 48px;
+}
+
+.modal-section h4 {
+  font-size: 0.6rem;
+  font-weight: 300;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-section p {
+  font-size: 0.85rem;
+  font-weight: 300;
+  line-height: 1.9;
+  color: var(--text-secondary);
+}
+
+/* FIXED: modal gallery — no forced aspect-ratio, no object-fit:cover */
+.modal-gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 48px;
+}
+
+.modal-gallery img,
+.modal-gallery video {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  transition: opacity 0.4s ease;
+}
+
+.modal-gallery img:hover,
+.modal-gallery video:hover {
+  opacity: 0.8;
+}
+
+.modal-gallery > :first-child {
+  grid-column: 1 / -1;
+}
+
+/* ============================================
+   SCROLL ANIMATIONS
+   ============================================ */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.9s var(--ease-out), transform 0.9s var(--ease-out);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+
+.parallax-text {
+  transition: transform 0.1s linear;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
+  .masonry { columns: 2; }
+  .about-inner { grid-template-columns: 1fr; gap: 60px; }
+  .statement-inner { flex-direction: column; align-items: flex-start; gap: 24px; }
+  .statement-meta { text-align: left; }
+}
+
+@media (max-width: 768px) {
+  .nav { padding: 24px; }
+  .nav-links { display: none; }
+  .nav-toggle { display: block; }
+
+  .nav-links.open {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: 0;
+    background: var(--bg-primary);
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    z-index: 1000;
+  }
+
+  .nav-links.open a {
+    font-size: 0.9rem;
+    letter-spacing: 0.3em;
+  }
+
+  .hero-name { letter-spacing: 0.15em; }
+  .hero-services { flex-direction: column; gap: 12px; }
+
+  .masonry { columns: 1; column-gap: 16px; }
+  .portfolio { padding: 60px 24px 120px; }
+  .about { padding: 100px 24px; }
+  .contact { padding: 100px 24px 60px; }
+  .statement { padding: 100px 24px 80px; }
+
+  .portfolio-header { flex-direction: column; align-items: flex-start; gap: 24px; }
+  .portfolio-filter { flex-wrap: wrap; gap: 16px; }
+
+  .modal-body { padding: 48px 24px 80px; }
+  .modal-gallery { grid-template-columns: 1fr; }
+
+  .footer { flex-direction: column; gap: 16px; text-align: center; }
+  .contact-socials { flex-wrap: wrap; gap: 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div class="loader" id="loader">
+  <div class="loader-text">LIU YUFAN</div>
+  <div class="loader-line"></div>
+</div>
+
+<!-- Film Grain -->
+<div class="grain"></div>
+
+<!-- Custom Cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-dot" id="cursorDot"></div>
+
+<!-- Navigation -->
+<nav class="nav">
+  <a href="#hero" class="nav-logo">LIU YUFAN</a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#works" data-hover>Works</a></li>
+    <li><a href="#about" data-hover>About</a></li>
+    <li><a href="#contact" data-hover>Contact</a></li>
+  </ul>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu">
+    <span></span>
+    <span></span>
+  </button>
+</nav>
+
+<!-- ==================== HERO ==================== -->
+<section class="hero" id="hero">
+  <video class="hero-video" autoplay muted loop playsinline preload="auto">
+    <source src="images/hero.MP4" type="video/mp4">
+  </video>
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <h1 class="hero-name">LIU YUFAN</h1>
+    <p class="hero-title">AIGC Visual Designer</p>
+    <div class="hero-divider"></div>
+    <div class="hero-services">
+      <span>Character Design</span>
+      <span>Environment Design</span>
+      <span>AI Video Production</span>
+    </div>
+  </div>
+  <div class="hero-scroll">
+    <span>Scroll to Explore</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- ==================== STATEMENT ==================== -->
+<section class="statement" id="works">
+  <div class="statement-inner">
+    <h2 class="statement-title parallax-text" data-speed="0.05">
+      Selected<br><em>Works</em>
+    </h2>
+    <div class="statement-meta reveal">
+      <span>Portfolio</span>
+      <span>2022 — 2026</span>
+    </div>
+  </div>
+  <div class="statement-line"></div>
+</section>
+
+<!-- ==================== PORTFOLIO ==================== -->
+<section class="portfolio">
+  <div class="portfolio-header reveal">
+    <div class="portfolio-filter">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="aigc">AIGC</button>
+      <button class="filter-btn" data-filter="guofeng">国风插画</button>
+      <button class="filter-btn" data-filter="ecom">电商设计</button>
+      <button class="filter-btn" data-filter="ip">IP潮玩</button>
+      <button class="filter-btn" data-filter="game">游戏设计</button>
+      <button class="filter-btn" data-filter="brand">品牌设计</button>
+    </div>
+    <span class="portfolio-count"><span id="projectCount">0</span> Projects</span>
+  </div>
+
+  <div class="masonry" id="masonry">
+    <!-- Items are injected by JS -->
+  </div>
+</section>
+
+<!-- ==================== MARQUEE ==================== -->
+<section class="marquee-section">
+  <div class="marquee-track">
+    <span class="marquee-text">Visual Design <span class="accent">&</span> Art Direction</span>
+    <span class="marquee-text">Character <span class="accent">&</span> Environment</span>
+    <span class="marquee-text">AI Video <span class="accent">&</span> Animation</span>
+    <span class="marquee-text">Visual Design <span class="accent">&</span> Art Direction</span>
+    <span class="marquee-text">Character <span class="accent">&</span> Environment</span>
+    <span class="marquee-text">AI Video <span class="accent">&</span> Animation</span>
+  </div>
+</section>
+
+<!-- ==================== ABOUT ==================== -->
+<section class="about" id="about">
+  <div class="about-inner">
+    <div class="about-left">
+      <div class="about-label reveal">About</div>
+      <h2 class="about-heading reveal reveal-delay-1">
+        A visual designer at the<br>
+        intersection of <em>art</em><br>
+        and <em>technology</em>
+      </h2>
+      <p class="about-text reveal reveal-delay-2">
+        我喜欢创造时尚潮流的作品。我的风格是将大胆的现代元素与传统文化相结合。
+        作为一名AIGC视觉设计师，我专注于将人工智能技术与艺术创作深度融合，
+        作品涵盖角色设计、场景概念、AI视频制作及游戏视觉开发。
+      </p>
+      <p class="about-text reveal reveal-delay-3">
+        我熟练掌握 Midjourney、Stable Diffusion、ChatGPT、ComfyUI、ControlNet、LoRA 训练等核心 AIGC 技术，
+        曾参与《王者荣耀》《凡人修仙传》《和平精英》《欢乐斗地主》等头部游戏项目的视觉设计，
+        致力于探索 AI 时代视觉设计的无限可能。
+      </p>
+    </div>
+
+    <div class="about-right">
+      <div class="about-section reveal">
+        <div class="about-section-title">Experience</div>
+        <ul class="about-list">
+          <li><span>卡扑动漫 — AI Designer & PM</span><span>2024.03 — 2025.07</span></li>
+          <li><span>花吃科技 — AI Designer</span><span>2023.12 — 2024.01</span></li>
+          <li><span>蓝色光标 — Illustrator</span><span>2022.09 — 2022.12</span></li>
+          <li><span>腾讯 — Product Operations</span><span>2021.01 — 2021.02</span></li>
+        </ul>
+      </div>
+
+      <div class="about-section reveal reveal-delay-1">
+        <div class="about-section-title">Education</div>
+        <ul class="about-list">
+          <li><span>深圳大学 — 硕士 · 数字媒体艺术</span><span>2020 — 2023</span></li>
+          <li><span>深圳大学 — 学士 · 数字媒体艺术</span><span>2016 — 2020</span></li>
+        </ul>
+      </div>
+
+      <div class="about-section reveal reveal-delay-2">
+        <div class="about-section-title">Skills</div>
+        <div class="skills-grid">
+          <div class="skill-icon">
+            <img src="images/07icon/stable diffusion.png" alt="Stable Diffusion">
+            <span class="skill-label">SD</span>
+          </div>
+          <div class="skill-icon">
+            <img src="images/07icon/AIGC.png" alt="ComfyUI">
+            <span class="skill-label">ComfyUI</span>
+          </div>
+          <div class="skill-icon">
+            <img src="images/07icon/Midjourney.png" alt="Midjourney">
+            <span class="skill-label">Midjourney</span>
+          </div>
+          <div class="skill-icon">
+            <img src="images/07icon/ChatGPT.png" alt="ChatGPT">
+            <span class="skill-label">ChatGPT</span>
+          </div>
+          <div class="skill-icon">
+            <img src="images/07icon/即梦AI.png" alt="即梦AI">
+            <span class="skill-label">即梦AI</span>
+          </div>
+          <div class="skill-icon">
+            <img src="images/07icon/Adobe Ps.png" alt="Photoshop">
+            <span class="skill-label">Photoshop</span>
+          </div>
+          <div class="skill-icon">
+            <img src="images/07icon/Adobe Ai.png" alt="Illustrator">
+            <span class="skill-label">Illustrator</span>
+          </div>
+          <div class="skill-icon">
+            <img src="images/07icon/Adobe Ae.png" alt="After Effects">
+            <span class="skill-label">AE</span>
+          </div>
+          <div class="skill-icon">
+            <img src="images/07icon/Adobe Pr.png" alt="Premiere">
+            <span class="skill-label">Premiere</span>
+          </div>
+          <div class="skill-icon">
+            <img src="images/07icon/Figma.png" alt="Figma">
+            <span class="skill-label">Figma</span>
+          </div>
+          <div class="skill-icon">
+            <img src="images/07icon/procreate.png" alt="Procreate">
+            <span class="skill-label">Procreate</span>
+          </div>
+          <div class="skill-icon">
+            <img src="images/07icon/office.png" alt="Office">
+            <span class="skill-label">Office</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-section reveal reveal-delay-3">
+        <div class="about-section-title">Key Projects</div>
+        <ul class="about-list">
+          <li><span>王者荣耀 — 视觉设计</span><span>2024</span></li>
+          <li><span>凡人修仙传 — 视觉设计</span><span>2024</span></li>
+          <li><span>和平精英 — 插画制作</span><span>2022</span></li>
+          <li><span>欢乐斗地主 — 插画制作</span><span>2022</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CONTACT ==================== -->
+<section class="contact" id="contact">
+  <div class="contact-inner">
+    <div class="contact-label reveal">Get in Touch</div>
+    <h2 class="contact-heading reveal reveal-delay-1">
+      Let's create<br>something <em>extraordinary</em>
+    </h2>
+    <a href="mailto:liuyufan182@gmail.com" class="contact-email reveal reveal-delay-2">liuyufan182@gmail.com</a>
+    <div class="contact-socials reveal reveal-delay-3">
+      <a href="#" data-hover><i class="fa-brands fa-weixin"></i>WeChat: 136-0266-2171</a>
+      <a href="#" data-hover><i class="fa-brands fa-behance"></i>Behance</a>
+      <a href="#" data-hover><i class="fa-brands fa-artstation"></i>ArtStation</a>
+      <a href="#" data-hover><i class="fa-solid fa-book-open"></i>小红书</a>
+    </div>
+  </div>
+  <footer class="footer">
+    <span>&copy; 2026 LIU YUFAN</span>
+    <span>AIGC VISUAL DESIGNER</span>
+  </footer>
+</section>
+
+<!-- ==================== PROJECT MODAL ==================== -->
+<div class="modal" id="modal">
+  <button class="modal-close" id="modalClose">CLOSE</button>
+  <div id="modalCoverWrap"></div>
+  <div class="modal-body">
+    <div class="modal-category" id="modalCategory"></div>
+    <h2 class="modal-title" id="modalTitle"></h2>
+    <div class="modal-year" id="modalYear"></div>
+
+    <div class="modal-section">
+      <h4>Project Overview</h4>
+      <p id="modalDesc"></p>
+    </div>
+
+    <div class="modal-section">
+      <h4>Creative Background</h4>
+      <p id="modalBg"></p>
+    </div>
+
+    <div class="modal-section">
+      <h4>AI Workflow</h4>
+      <p id="modalWorkflow"></p>
+    </div>
+
+    <div class="modal-gallery" id="modalGallery"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================
+   PROJECT DATA — 26 PROJECTS, ALL LOCAL ASSETS
+   File paths match actual folder structure exactly
+   ============================================ */
+const projects = [
+
+  /* ──────── 01 AIGC (7) ──────── */
+  {
+    id: 1,
+    title: '欧卡角色模型训练',
+    category: 'aigc',
+    categoryLabel: 'AIGC',
+    year: '2024',
+    cover: 'images/01AIGC/01欧卡角色模型训练/cover.png',
+    coverType: 'image',
+    desc: '针对欧卡风格角色进行专属LoRA模型训练。通过精心准备训练数据集与参数调优，实现高度一致的角色风格输出，为后续批量角色设计奠定基础。',
+    bg: '项目需要建立一套可复用的欧卡风格角色模型，确保在不同场景和姿态下保持角色的视觉一致性，为游戏角色量产提供技术基础。',
+    workflow: '收集参考图 → 数据标注与预处理 → LoRA训练（多轮迭代） → 效果评估与调参 → webUI多模型及参数测试 → 批量生成测试',
+    gallery: [
+      { type: 'image', src: 'images/01AIGC/01欧卡角色模型训练/cover.png' },
+      { type: 'image', src: 'images/01AIGC/01欧卡角色模型训练/01素材库与数据设定.png' },
+      { type: 'image', src: 'images/01AIGC/01欧卡角色模型训练/02打标.png' },
+      { type: 'image', src: 'images/01AIGC/01欧卡角色模型训练/03.png' },
+      { type: 'image', src: 'images/01AIGC/01欧卡角色模型训练/04.png' },
+      { type: 'image', src: 'images/01AIGC/01欧卡角色模型训练/05.png' },
+      { type: 'image', src: 'images/01AIGC/01欧卡角色模型训练/06.png' }
+    ]
+  },
+  {
+    id: 2,
+    title: 'AI辅助角色设计',
+    category: 'aigc',
+    categoryLabel: 'AIGC',
+    year: '2025',
+    cover: 'images/01AIGC/02AIGC角色设计/01ai辅助角色设计/cover.jpg',
+    coverType: 'image',
+    desc: '建立完整的AI辅助角色设定工作流，涵盖从AI概念生成到Depth/Lineart渲染控制的全流程。通过多阶段渲染控制，实现从概念到精稿的高效转化。',
+    bg: '传统角色设定流程耗时长、修改成本高。本项目旨在建立一套可复用的SD角色设定工作流，通过ControlNet实现多阶段渲染的精确控制。',
+    workflow: 'AI辅助角色设定 → Depth渲染控制 → Prompt控制 → Lineart渲染 → 角色动态一致性测试 → 线稿+渲染图输出',
+    gallery: [
+      { type: 'image', src: 'images/01AIGC/02AIGC角色设计/01ai辅助角色设计/cover.jpg' },
+      { type: 'image', src: 'images/01AIGC/02AIGC角色设计/01ai辅助角色设计/01.jpg' },
+      { type: 'image', src: 'images/01AIGC/02AIGC角色设计/01ai辅助角色设计/02.png' },
+      { type: 'image', src: 'images/01AIGC/02AIGC角色设计/01ai辅助角色设计/03depth控制.png' },
+      { type: 'image', src: 'images/01AIGC/02AIGC角色设计/01ai辅助角色设计/04prompt控制.png' },
+      { type: 'image', src: 'images/01AIGC/02AIGC角色设计/01ai辅助角色设计/05lineart控制.png' },
+      { type: 'image', src: 'images/01AIGC/02AIGC角色设计/01ai辅助角色设计/06depth+openpose控制.png' }
+    ]
+  },
+  {
+    id: 3,
+    title: '角色动态图-保持一致性',
+    category: 'aigc',
+    categoryLabel: 'AIGC',
+    year: '2026',
+    cover: 'images/01AIGC/02AIGC角色设计/02角色动态图-保持一致性/01原稿.png',
+    coverType: 'image',
+    desc: '探索角色在多姿态、多视角下的视觉一致性方案。通过AI控制手段实现角色动态图的统一风格，确保角色在不同角度和动作中保持辨识度。',
+    bg: '角色动态一致性是游戏和动画制作中的核心挑战。项目通过Depth+ControlNet实现角色在不同视角下的精确控制，保持视觉统一。',
+    workflow: '原稿设定 → 多视角Pose控制 → Depth渲染 → 一致性校验 → 动态图输出 → 线稿+渲染图对比',
+    gallery: [
+      { type: 'image', src: 'images/01AIGC/02AIGC角色设计/02角色动态图-保持一致性/01原稿.png' },
+      { type: 'image', src: 'images/01AIGC/02AIGC角色设计/02角色动态图-保持一致性/02右侧身.png' },
+      { type: 'image', src: 'images/01AIGC/02AIGC角色设计/02角色动态图-保持一致性/03左侧身.png' },
+      { type: 'video', src: 'images/01AIGC/02AIGC角色设计/02角色动态图-保持一致性/04video.mp4' }
+    ]
+  },
+  {
+    id: 4,
+    title: '风格转化+三视图',
+    category: 'aigc',
+    categoryLabel: 'AIGC',
+    year: '2026',
+    cover: 'images/01AIGC/02AIGC角色设计/03风格转化+三视图/01.jpg',
+    coverType: 'image',
+    desc: '研究IP角色在不同视觉风格间的转换可能性。通过AI渲染技术将同一角色转化为多种风格表现，并完成标准化三视图输出。',
+    bg: '风格转化能力是AIGC角色设计中的重要技能。项目探索了同一IP在不同艺术风格下的视觉表现，为IP的多维度开发提供参考。',
+    workflow: '原图风格分析 → 目标风格定义 → AI风格迁移 → 效果调优 → 三视图标准化 → 风格对比输出',
+    gallery: [
+      { type: 'image', src: 'images/01AIGC/02AIGC角色设计/03风格转化+三视图/01.jpg' }
+    ]
+  },
+  {
+    id: 5,
+    title: '海外游戏买量视频制作',
+    category: 'aigc',
+    categoryLabel: 'AIGC',
+    year: '2026',
+    cover: 'images/01AIGC/03海外游戏买量视频制作演示/cover.jpg',
+    coverType: 'image',
+    desc: '为海外游戏市场推广制作买量视频。利用AIGC技术快速生成高质量游戏场景与角色动态素材，配合视频剪辑完成面向海外市场的广告视频制作。',
+    bg: '海外游戏买量市场竞争激烈，需要大量高质量、风格多样的广告视频素材。AIGC技术可以大幅提升素材产出效率，降低制作成本。',
+    workflow: '市场分析 → 创意脚本 → 分镜设计 → AI素材生成 → 关键帧控制 → 视频合成输出',
+    gallery: [
+      { type: 'image', src: 'images/01AIGC/03海外游戏买量视频制作演示/cover.jpg' },
+      { type: 'image', src: 'images/01AIGC/03海外游戏买量视频制作演示/01分镜.png' },
+      { type: 'image', src: 'images/01AIGC/03海外游戏买量视频制作演示/02分镜.png' },
+      { type: 'image', src: 'images/01AIGC/03海外游戏买量视频制作演示/03关键帧.jpg' },
+      { type: 'image', src: 'images/01AIGC/03海外游戏买量视频制作演示/04关键帧.jpg' },
+      { type: 'video', src: 'images/01AIGC/03海外游戏买量视频制作演示/05video.mp4' }
+    ]
+  },
+  {
+    id: 6,
+    title: '海外动态互动小说制作',
+    category: 'aigc',
+    categoryLabel: 'AIGC',
+    year: '2025',
+    cover: 'images/01AIGC/04海外动态互动小说制作演示/cover.png',
+    coverType: 'image',
+    desc: '为海外市场制作动态互动小说内容。利用AI工具链完成从剧本编写到场景生成的全流程制作，实现沉浸式的互动叙事体验。',
+    bg: '互动小说是海外市场的热门内容形态。项目探索了AIGC在互动叙事领域的应用，利用Midjourney和ChatGPT协同完成内容生产。',
+    workflow: 'ChatGPT剧本创作 → Midjourney场景生成 → 角色一致性控制 → 动态效果制作 → 交互逻辑搭建 → 测试与发布',
+    gallery: [
+      { type: 'image', src: 'images/01AIGC/04海外动态互动小说制作演示/cover.png' },
+      { type: 'image', src: 'images/01AIGC/04海外动态互动小说制作演示/01.png' },
+      { type: 'image', src: 'images/01AIGC/04海外动态互动小说制作演示/02.png' },
+      { type: 'image', src: 'images/01AIGC/04海外动态互动小说制作演示/03.png' },
+      { type: 'image', src: 'images/01AIGC/04海外动态互动小说制作演示/04.png' },
+      { type: 'image', src: 'images/01AIGC/04海外动态互动小说制作演示/05.png' },
+      { type: 'video', src: 'images/01AIGC/04海外动态互动小说制作演示/06video.mp4' }
+    ]
+  },
+  {
+    id: 7,
+    title: '原创AI漫剧制作',
+    category: 'aigc',
+    categoryLabel: 'AIGC',
+    year: '2026',
+    cover: 'images/01AIGC/05原创AI漫剧制作演示/cover.png',
+    coverType: 'image',
+    desc: '从剧本创作到分镜设计，再到角色设定与场景生成，完成全流程AI漫剧制作。探索AI在连续叙事视觉创作中的应用边界。',
+    bg: 'AI漫剧是新兴的内容形态，需要在保持角色一致性的同时完成连续场景的叙事。项目完整呈现了从创意到成品的全过程。',
+    workflow: '剧本创作 → 分镜脚本 → 角色设定（男/女） → 场景生成 → 分镜绘制（6组） → 合成输出',
+    gallery: [
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/cover.png' },
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/01剧本.png' },
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/02分镜脚本.png' },
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/03角色设定 男.png' },
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/04角色设定 女.png' },
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/05场景设定.png' },
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/06分镜1.png' },
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/07分镜2.png' },
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/08分镜3.png' },
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/09分镜4.png' },
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/10分镜5.png' },
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/11分镜6.png' }
+    ]
+  },
+
+  /* ──────── 02 国风插画 (2) ──────── */
+  {
+    id: 8,
+    title: '国风插画',
+    category: 'guofeng',
+    categoryLabel: '国风插画',
+    year: '2025',
+    cover: 'images/02国风插画/01插画/cover.jpg',
+    coverType: 'image',
+    desc: '以中国传统美学为灵感的系列插画创作。将古典元素与现代数字绘画技法融合，打造兼具东方韵味与当代审美的视觉作品。',
+    bg: '国风插画是对传统文化的现代诠释。项目探索了如何在保持传统美学精神的同时，融入现代设计语言和数字绘画技法。',
+    workflow: '文化元素研究 → 构图设计 → AI绘图 → 细节调优 → 后期调色',
+    gallery: [
+      { type: 'image', src: 'images/02国风插画/01插画/cover.jpg' },
+      { type: 'image', src: 'images/02国风插画/01插画/01.png' },
+      { type: 'image', src: 'images/02国风插画/01插画/02.png' },
+      { type: 'image', src: 'images/02国风插画/01插画/03.png' },
+      { type: 'image', src: 'images/02国风插画/01插画/04.png' },
+      { type: 'image', src: 'images/02国风插画/01插画/05.png' }
+    ]
+  },
+  {
+    id: 9,
+    title: '动态插画',
+    category: 'guofeng',
+    categoryLabel: '国风插画',
+    year: '2025',
+    cover: 'images/02国风插画/02动态插画/cover.png',
+    coverType: 'image',
+    desc: '将静态国风插画转化为动态影像。通过AI视频工具为插画注入生命力，创造沉浸式的动态视觉体验。',
+    bg: '动态插画是插画艺术的新维度。通过AI视频生成技术，让静态画面中的元素产生流动与变化，赋予作品生命力。',
+    workflow: '静态插画 → 动态效果设计 → AI视频动态效果 → 音效配合 → 视频输出',
+    gallery: [
+      { type: 'video', src: 'images/02国风插画/02动态插画/01video谷雨.mp4' },
+      { type: 'video', src: 'images/02国风插画/02动态插画/02video立春.mp4' },
+      { type: 'video', src: 'images/02国风插画/02动态插画/03video小满.mp4' },
+      { type: 'video', src: 'images/02国风插画/02动态插画/04video雨水.mov' }
+    ]
+  },
+
+  /* ──────── 03 电商设计 (3) ──────── */
+  {
+    id: 10,
+    title: '包装插画设计',
+    category: 'ecom',
+    categoryLabel: '电商设计',
+    year: '2025',
+    cover: 'images/03电商设计/01包装插画/cover.jpg',
+    coverType: 'image',
+    desc: '为消费品牌设计产品包装插画与营销海报。将品牌调性转化为独特的视觉语言，涵盖海报设计、产品插图及抖音营销视频等多元物料。',
+    bg: '消费品牌需要通过差异化的视觉设计在竞争激烈的市场中脱颖而出。AI辅助的插画设计可以大幅提升创作效率和视觉品质。',
+    workflow: '品牌调性分析 → 视觉概念 → 插画创作 → AI调优 → 多平台适配 → 营销视频制作',
+    gallery: [
+      { type: 'image', src: 'images/03电商设计/01包装插画/cover.jpg' },
+      { type: 'image', src: 'images/03电商设计/01包装插画/01草稿1.png' },
+      { type: 'image', src: 'images/03电商设计/01包装插画/02成图1.jpg' },
+      { type: 'image', src: 'images/03电商设计/01包装插画/03草稿2.png' },
+      { type: 'image', src: 'images/03电商设计/01包装插画/04成图2.png' },
+      { type: 'image', src: 'images/03电商设计/01包装插画/05草稿3.png' },
+      { type: 'image', src: 'images/03电商设计/01包装插画/05成图3.jpg' },
+      { type: 'video', src: 'images/03电商设计/01包装插画/05美素佳儿运营广告片段.mp4' }
+    ]
+  },
+  {
+    id: 11,
+    title: '首饰类电商物料设计',
+    category: 'ecom',
+    categoryLabel: '电商设计',
+    year: '2026',
+    cover: 'images/03电商设计/02首饰类电商物料设计/cover.png',
+    coverType: 'image',
+    desc: '为某耳饰品牌设计全套电商视觉物料。包含产品展示、模特图、细节图及宣传视频，打造高端精致的线上购物体验。（虚拟项目）',
+    bg: '首饰品类电商需要在有限的展示空间内传递品牌价值与产品质感。通过精心设计的视觉物料提升产品的线上呈现效果。',
+    workflow: '品牌风格定义 → 产品拍摄方案 → AI辅助修图 → 详情页设计 → AI制作模特图 → 宣传视频制作',
+    gallery: [
+      { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/cover.png' },
+      { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/01产品展示.png' },
+      { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/02产品三视图.png' },
+      { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/03产品展示.png' },
+      { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/04产品展示.png' },
+      { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/05产品展示.png' },
+      { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/06模特展示.png' },
+      { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/07模特展示.png' },
+      { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/08模特展示.png' },
+      { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/09模特展示.png' },
+      { type: 'video', src: 'images/03电商设计/02首饰类电商物料设计/10video.mp4' }
+    ]
+  },
+  {
+    id: 12,
+    title: '高奢电商物料设计',
+    category: 'ecom',
+    categoryLabel: '电商设计',
+    year: '2026',
+    cover: 'images/03电商设计/03高奢电商物料设计/cover.png',
+    coverType: 'image',
+    desc: '为高端奢侈品类设计电商视觉物料。以产品特性分析产品风格，从模特图、详情页，打造符合奢侈品牌调性的高品质电商视觉体验。',
+    bg: '高奢品类电商视觉需要在数字化场景中保持品牌的高端质感。项目探索了如何在电商环境中呈现奢侈品的精致与格调。',
+    workflow: '品牌研究 → 视觉策略 → 产品精修 → AI模特合成 → 详情页排版 → 品牌视觉统一',
+    gallery: [
+      { type: 'image', src: 'images/03电商设计/03高奢电商物料设计/cover.png' },
+      { type: 'image', src: 'images/03电商设计/03高奢电商物料设计/01产品logo.png' },
+      { type: 'image', src: 'images/03电商设计/03高奢电商物料设计/02产品照片.jpg' },
+      { type: 'image', src: 'images/03电商设计/03高奢电商物料设计/03商业质感精修.png' },
+      { type: 'image', src: 'images/03电商设计/03高奢电商物料设计/04模特图.png' },
+      { type: 'image', src: 'images/03电商设计/03高奢电商物料设计/05模特图.png' },
+      { type: 'image', src: 'images/03电商设计/03高奢电商物料设计/06模特图.png' },
+      { type: 'image', src: 'images/03电商设计/03高奢电商物料设计/07模特图.png' },
+      { type: 'image', src: 'images/03电商设计/03高奢电商物料设计/08海报.png' },
+      { type: 'image', src: 'images/03电商设计/03高奢电商物料设计/09详情页.png' },
+      { type: 'image', src: 'images/03电商设计/03高奢电商物料设计/10主图.png' }
+    ]
+  },
+
+  /* ──────── 04 IP潮玩 (2) ──────── */
+  {
+    id: 13,
+    title: 'IP风格转换',
+    category: 'ip',
+    categoryLabel: 'IP潮玩',
+    year: '2025',
+    cover: 'images/04IP潮玩/01IP风格转换/01原图.png',
+    coverType: 'image',
+    desc: '探索IP形象在不同视觉风格间的转换。从原图到Depth渲染、Lineart渲染，再到最终效果图，展示IP的多维度视觉可能性。',
+    bg: 'IP风格转换是潮玩设计中的核心技能。通过AI辅助的风格迁移，可以快速探索IP在不同艺术风格下的表现力。',
+    workflow: '原图分析 → Depth渲染 → Lineart渲染 → 效果图生成 → 线稿效果对比 → 风格统一输出',
+    gallery: [
+      { type: 'image', src: 'images/04IP潮玩/01IP风格转换/01原图.png' },
+      { type: 'image', src: 'images/04IP潮玩/01IP风格转换/02deepth控制.png' },
+      { type: 'image', src: 'images/04IP潮玩/01IP风格转换/03lineart控制.png' },
+      { type: 'image', src: 'images/04IP潮玩/01IP风格转换/04垫图.png' },
+      { type: 'image', src: 'images/04IP潮玩/01IP风格转换/05最终效果.png' }
+    ]
+  },
+  {
+    id: 14,
+    title: '原创IP设计',
+    category: 'ip',
+    categoryLabel: 'IP潮玩',
+    year: '2025',
+    cover: 'images/04IP潮玩/02IP设计/cover.jpg',
+    coverType: 'image',
+    desc: '从Logo设计到立体效果图，完成原创IP的全案设计。包含IP形象设计、品牌标识、线稿与效果图展示，以及动态演示视频。',
+    bg: '原创IP设计需要从概念到落地的完整思考。项目涵盖IP形象的品牌化设计，探索潮玩IP的商业化视觉路径。',
+    workflow: 'IP概念定义 → Logo设计 → 形象线稿 → 3D效果图 → 动态展示视频 → 品牌应用',
+    gallery: [
+      { type: 'image', src: 'images/04IP潮玩/02IP设计/cover.jpg' },
+      { type: 'image', src: 'images/04IP潮玩/02IP设计/01logo灵犀幻藏.png' },
+      { type: 'image', src: 'images/04IP潮玩/02IP设计/02线稿.png' },
+      { type: 'image', src: 'images/04IP潮玩/02IP设计/03效果图.jpg' },
+      { type: 'video', src: 'images/04IP潮玩/02IP设计/04video.mp4' }
+    ]
+  },
+
+  /* ──────── 05 游戏设计 (7) ──────── */
+  {
+    id: 15,
+    title: 'Goddess and Jewelry Series',
+    category: 'game',
+    categoryLabel: '游戏设计',
+    year: '2025',
+    cover: 'images/05游戏设计/01角色设计/01Goddess and Jewelry Series/cover.png',
+    coverType: 'image',
+    desc: '游戏角色概念设计系列。从角色设定到动态姿势，探索不同风格的游戏角色视觉方案，为游戏项目提供高品质的角色设计。',
+    bg: '游戏角色设计需要兼顾美观性与功能性。项目在角色造型、动态姿势和视觉表现上进行了深入探索。',
+    workflow: '角色概念 → 动态姿势设计 → 线稿精修 → 上色渲染 → 细节调整 → 最终输出',
+    gallery: [
+      { type: 'image', src: 'images/05游戏设计/01角色设计/01Goddess and Jewelry Series/cover.png' },
+      { type: 'image', src: 'images/05游戏设计/01角色设计/01Goddess and Jewelry Series/01.png' }
+    ]
+  },
+  {
+    id: 16,
+    title: '古风玄幻',
+    category: 'game',
+    categoryLabel: '游戏设计',
+    year: '2024',
+    cover: 'images/05游戏设计/01角色设计/02古风玄幻/01.jpg',
+    coverType: 'image',
+    desc: '人设从动物拟人和猎人的主题出发，从服饰和角色的体型出发。营造出矫健的猎人缩具有的野性和侵略感。',
+    bg: '古风玄幻角色设计需要在中国传统美学与游戏功能性之间找到平衡。项目从动物拟人化角度切入，探索独特的角色视觉语言。',
+    workflow: '角色概念 → 动态姿势设计 → 线稿精修 → 上色渲染 → 细节调整 → 最终输出',
+    gallery: [
+      { type: 'image', src: 'images/05游戏设计/01角色设计/02古风玄幻/01.jpg' }
+    ]
+  },
+  {
+    id: 17,
+    title: '赛博封神',
+    category: 'game',
+    categoryLabel: '游戏设计',
+    year: '2022',
+    cover: 'images/05游戏设计/01角色设计/03赛博封神/01.png',
+    coverType: 'image',
+    desc: '以《封神演义》为蓝本，结合传统京剧元素，融合了赛博朋克风格进行角色设计。',
+    bg: '赛博封神系列将中国传统神话与未来科技美学碰撞，创造出独特的视觉风格。京剧脸谱与赛博朋克的结合是项目的核心创意点。',
+    workflow: '角色概念 → 动态姿势设计 → 线稿精修 → 上色渲染 → 细节调整 → 最终输出',
+    gallery: [
+      { type: 'image', src: 'images/05游戏设计/01角色设计/03赛博封神/01.png' },
+      { type: 'image', src: 'images/05游戏设计/01角色设计/03赛博封神/02.png' },
+      { type: 'image', src: 'images/05游戏设计/01角色设计/03赛博封神/03.png' }
+    ]
+  },
+  {
+    id: 18,
+    title: '和平精英海报',
+    category: 'game',
+    categoryLabel: '游戏设计',
+    year: '2022',
+    cover: 'images/05游戏设计/02美宣海报/01和平精英海报/cover.jpg',
+    coverType: 'image',
+    desc: '为《和平精英》设计的海报。将游戏角色与营销主题结合，产出高质量的商业宣传视觉作品。',
+    bg: '和平精英作为头部射击手游，其美宣海报需要在激烈的市场竞争中吸引玩家关注。项目注重角色动态与视觉冲击力的表现。',
+    workflow: '需求分析 → 创意概念 → 人物动态设计 → 海报构图 → 插画绘制与渲染 → 多尺寸延展',
+    gallery: [
+      { type: 'image', src: 'images/05游戏设计/02美宣海报/01和平精英海报/cover.jpg' },
+      { type: 'image', src: 'images/05游戏设计/02美宣海报/01和平精英海报/01和平精英.jpg' },
+      { type: 'image', src: 'images/05游戏设计/02美宣海报/01和平精英海报/02和平精英.jpg' },
+      { type: 'image', src: 'images/05游戏设计/02美宣海报/01和平精英海报/03和平精英.png' }
+    ]
+  },
+  {
+    id: 19,
+    title: '王者荣耀公孙离玉兔公主主视觉',
+    category: 'game',
+    categoryLabel: '游戏设计',
+    year: '2022',
+    cover: 'images/05游戏设计/02美宣海报/02王者荣耀公孙离玉兔公主主视觉/cover.png',
+    coverType: 'image',
+    desc: '为《王者荣耀》设计的海报。将游戏角色与营销主题结合，产出高质量的商业宣传视觉作品。',
+    bg: '王者荣耀公孙离玉兔公主皮肤主视觉设计。项目需要在保持角色辨识度的同时，呈现皮肤独特的故事氛围与美学风格。',
+    workflow: '需求分析 → 创意概念 → 人物动态设计 → 多构图延展 → 插画绘制与渲染',
+    gallery: [
+      { type: 'image', src: 'images/05游戏设计/02美宣海报/02王者荣耀公孙离玉兔公主主视觉/cover.png' },
+      { type: 'image', src: 'images/05游戏设计/02美宣海报/02王者荣耀公孙离玉兔公主主视觉/01王者荣耀.png' }
+    ]
+  },
+  {
+    id: 20,
+    title: '和平精英赛事主视觉',
+    category: 'game',
+    categoryLabel: '游戏设计',
+    year: '2023',
+    cover: 'images/05游戏设计/02美宣海报/03和平精英赛事主视觉/cover.png',
+    coverType: 'image',
+    desc: '为《和平精英》设计的赛事主视觉海报。将游戏角色与营销主题结合，产出高质量的商业宣传视觉作品。',
+    bg: '和平精英赛事主视觉需要传递竞技精神与赛事氛围。项目在角色动态和视觉表现上注重赛事的紧张感与观赏性。',
+    workflow: '需求分析 → 创意概念 → 人物动态设计 → 海报构图 → 插画绘制与渲染 → 物料设计及概念效果',
+    gallery: [
+      { type: 'image', src: 'images/05游戏设计/02美宣海报/03和平精英赛事主视觉/cover.png' },
+      { type: 'image', src: 'images/05游戏设计/02美宣海报/03和平精英赛事主视觉/01和平精英赛事主视觉.png' },
+      { type: 'image', src: 'images/05游戏设计/02美宣海报/03和平精英赛事主视觉/02和平精英主视觉.png' }
+    ]
+  },
+  {
+    id: 21,
+    title: 'MOBA游戏水元素特效',
+    category: 'game',
+    categoryLabel: '游戏设计',
+    year: '2025',
+    cover: 'images/05游戏设计/03特效设计/01MOBA游戏水元素特效/cover.jpg',
+    coverType: 'image',
+    desc: '游戏特效视觉设计。无AI辅助绘制，创作具有冲击力的游戏技能特效与场景氛围效果。',
+    bg: '游戏特效是提升游戏体验的重要视觉元素。项目完全依靠手绘完成，探索水元素特效的视觉表现力。',
+    workflow: '特效概念设计 → 参考收集 → 动态效果调整 → 粒子细节优化 → 最终输出',
+    gallery: [
+      { type: 'image', src: 'images/05游戏设计/03特效设计/01MOBA游戏水元素特效/cover.jpg' },
+      { type: 'image', src: 'images/05游戏设计/03特效设计/01MOBA游戏水元素特效/01.jpg' },
+      { type: 'image', src: 'images/05游戏设计/03特效设计/01MOBA游戏水元素特效/02.jpg' }
+    ]
+  },
+
+  /* ──────── 06 品牌设计 (5) ──────── */
+  {
+    id: 22,
+    title: 'Logo设计',
+    category: 'brand',
+    categoryLabel: '品牌设计',
+    year: '2025',
+    cover: 'images/06品牌设计/01logo设计/01.png',
+    coverType: 'image',
+    desc: '品牌Logo设计项目。从概念草图到最终方案，打造简洁而富有辨识度的品牌标识。',
+    bg: 'Logo设计是品牌视觉系统的核心。项目追求在极简中传递品牌精神，确保标识在不同媒介上的一致性与适应性。',
+    workflow: '品牌调研 → 概念草图 → 数字化设计',
+    gallery: [
+      { type: 'image', src: 'images/06品牌设计/01logo设计/01.png' },
+      { type: 'image', src: 'images/06品牌设计/01logo设计/02.png' },
+      { type: 'image', src: 'images/06品牌设计/01logo设计/03.png' }
+    ]
+  },
+  {
+    id: 23,
+    title: '空间设计',
+    category: 'brand',
+    categoryLabel: '品牌设计',
+    year: '2025',
+    cover: 'images/06品牌设计/02空间设计/cover.jpg',
+    coverType: 'image',
+    desc: '品牌线下店的空间概念设计，打造品牌与用户的第一次现实连接的身心感受初印象。营造高端、商务、专业感并存的品牌形象。',
+    bg: '品牌空间是品牌与用户产生真实连接的场所。项目通过空间设计传递品牌的视觉语言与价值主张。',
+    workflow: '品牌定位 → 视觉策略 → 概念草图 → 色彩渲染 → 最终输出',
+    gallery: [
+      { type: 'image', src: 'images/06品牌设计/02空间设计/cover.jpg' },
+      { type: 'image', src: 'images/06品牌设计/02空间设计/01门头.jpg' },
+      { type: 'image', src: 'images/06品牌设计/02空间设计/02门头.jpg' },
+      { type: 'image', src: 'images/06品牌设计/02空间设计/03前台.JPG' },
+      { type: 'image', src: 'images/06品牌设计/02空间设计/04教室.JPG' }
+    ]
+  },
+  {
+    id: 24,
+    title: '品牌VI视觉',
+    category: 'brand',
+    categoryLabel: '品牌设计',
+    year: '2025',
+    cover: 'images/06品牌设计/03品牌VI视觉/cover.jpg',
+    coverType: 'image',
+    desc: '品牌VI视觉识别系统设计。建立统一的品牌视觉规范，确保品牌在各触点的consistency。',
+    bg: 'VI系统是品牌建设的基石。项目通过系统化的设计方法，帮助企业建立清晰、一致的品牌视觉识别体系。',
+    workflow: '品牌定位 → 视觉策略 → VI基础系统设计 → 应用规范 → 品牌手册输出',
+    gallery: [
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/cover.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/01 嘉分谷品牌手册（浅色版）.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/02 目录.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/03 前言.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/04 品牌基本.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/05 品牌故事.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/06 品牌主张.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/07 品牌标识的释义.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/08 品牌标识与口号.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/09 品牌英文标识.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/10 品牌中英文标识标准制图.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/11 中文标识应用最小尺寸.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/12 品牌标识与其他企业或赞助的组合.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/13 中文标识安全距离.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/14 正确的标识使用.jpg' },
+      { type: 'image', src: 'images/06品牌设计/03品牌VI视觉/15 错误的标识使用.jpg' }
+    ]
+  },
+  {
+    id: 25,
+    title: '品牌印刷物料',
+    category: 'brand',
+    categoryLabel: '品牌设计',
+    year: '2025',
+    cover: 'images/06品牌设计/04品牌印刷物料/cover.jpg',
+    coverType: 'image',
+    desc: '品牌印刷品设计与制作。涵盖单页、海报、Banner、H5、桁架等多种印刷与数字物料的设计与输出。',
+    bg: '印刷物料是品牌线下触达的重要媒介。项目注重印刷工艺与视觉设计的结合，确保成品品质。',
+    workflow: '内容策划 → 版式设计 → 印刷工艺选择 → 打样确认 → 批量印刷 → 品质验收',
+    gallery: [
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/cover.jpg' },
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/01三折页反.jpg' },
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/02三折页正.jpg' },
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/03 50.6×70.6cm in 300DPI 海报横版.jpg' },
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/04 50.6×70.6cm in 300DPI 海报竖版.jpg' },
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/05 60×160cm in 150DPI 注水道旗.jpg' },
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/06 80×200cm in 150DPI 易拉宝.jpg' },
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/07 300×500cm in 72DPI 桁架.jpg' },
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/08 300x250 px in 300DPI banner板式2.jpg' },
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/09 640×1136px in 150DPI H5板式.jpg' },
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/10 728x90 px in 300DPI banner板式1.jpg' },
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/11 1080×300px in 150DPI 公众号页眉.jpg' },
+      { type: 'image', src: 'images/06品牌设计/04品牌印刷物料/12 1080×300px in 150DPI 公众号页尾.jpg' }
+    ]
+  },
+  {
+    id: 26,
+    title: '品牌周边与包装',
+    category: 'brand',
+    categoryLabel: '品牌设计',
+    year: '2025',
+    cover: 'images/06品牌设计/05品牌周边与包装/cover.png',
+    coverType: 'image',
+    desc: '品牌周边产品与包装设计。将品牌视觉延伸到实体产品，打造完整的品牌体验闭环。',
+    bg: '周边包装是品牌触达用户的重要物理媒介。项目注重包装的功能性与美学性的统一。',
+    workflow: '品牌调性分析 → 包装结构设计 → 视觉设计',
+    gallery: [
+      { type: 'image', src: 'images/06品牌设计/05品牌周边与包装/cover.png' },
+      { type: 'image', src: 'images/06品牌设计/05品牌周边与包装/01.png' },
+      { type: 'image', src: 'images/06品牌设计/05品牌周边与包装/02.png' }
+    ]
+  }
+];
+
+/* ============================================
+   RENDER MASONRY
+   ============================================ */
+const masonry = document.getElementById('masonry');
+const projectCountEl = document.getElementById('projectCount');
+
+function renderMasonry(filter = 'all') {
+  const filtered = filter === 'all' ? projects : projects.filter(p => p.category === filter);
+  projectCountEl.textContent = filtered.length;
+
+  masonry.innerHTML = '';
+  filtered.forEach((p, i) => {
+    const item = document.createElement('div');
+    item.className = 'masonry-item reveal';
+    item.style.transitionDelay = `${i * 0.06}s`;
+    item.setAttribute('data-id', p.id);
+
+    let mediaHTML = '';
+    if (p.coverType === 'video') {
+      mediaHTML = `
+        <video src="${p.cover}" muted loop playsinline preload="metadata"></video>
+        <div class="play-icon"></div>
+      `;
+    } else {
+      mediaHTML = `<img src="${p.cover}" alt="${p.title}" loading="lazy">`;
+    }
+
+    item.innerHTML = `
+      ${mediaHTML}
+      <div class="masonry-overlay">
+        <h3>${p.title}</h3>
+        <div class="meta">
+          <span>${p.categoryLabel}</span>
+          <div class="dot"></div>
+          <span>${p.year}</span>
+        </div>
+      </div>
+    `;
+
+    // Hover play for video items
+    const vid = item.querySelector('video');
+    if (vid) {
+      item.addEventListener('mouseenter', () => { try { vid.play(); } catch(e){} });
+      item.addEventListener('mouseleave', () => { try { vid.pause(); vid.currentTime = 0; } catch(e){} });
+    }
+
+    item.addEventListener('click', () => openModal(p));
+    masonry.appendChild(item);
+  });
+
+  observeRevealElements();
+}
+
+renderMasonry();
+
+/* ============================================
+   FILTER
+   ============================================ */
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderMasonry(btn.dataset.filter);
+  });
+});
+
+/* ============================================
+   MODAL
+   ============================================ */
+const modal = document.getElementById('modal');
+const modalClose = document.getElementById('modalClose');
+const modalCoverWrap = document.getElementById('modalCoverWrap');
+
+function openModal(project) {
+  // Cover — use first gallery item
+  const firstItem = project.gallery[0];
+  if (firstItem.type === 'video') {
+    modalCoverWrap.innerHTML = `<video class="modal-cover-video" src="${firstItem.src}" autoplay muted loop playsinline></video>`;
+  } else {
+    modalCoverWrap.innerHTML = `<img class="modal-cover-img" src="${firstItem.src}" alt="${project.title}">`;
+  }
+
+  document.getElementById('modalCategory').textContent = project.categoryLabel;
+  document.getElementById('modalTitle').textContent = project.title;
+  document.getElementById('modalYear').textContent = project.year;
+  document.getElementById('modalDesc').textContent = project.desc;
+  document.getElementById('modalBg').textContent = project.bg;
+  document.getElementById('modalWorkflow').textContent = project.workflow;
+
+  // Gallery — skip first item (already used as cover)
+  const gallery = document.getElementById('modalGallery');
+  gallery.innerHTML = '';
+  project.gallery.slice(1).forEach(item => {
+    if (item.type === 'video') {
+      const vid = document.createElement('video');
+      vid.src = item.src;
+      vid.controls = true;
+      vid.muted = true;
+      vid.playsInline = true;
+      vid.alt = project.title;
+      gallery.appendChild(vid);
+    } else {
+      const img = document.createElement('img');
+      img.src = item.src;
+      img.alt = project.title;
+      img.loading = 'lazy';
+      gallery.appendChild(img);
+    }
+  });
+
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  modal.classList.remove('active');
+  // Stop any playing videos in modal
+  modalCoverWrap.querySelectorAll('video').forEach(v => { v.pause(); v.src = ''; });
+  document.getElementById('modalGallery').querySelectorAll('video').forEach(v => { v.pause(); v.src = ''; });
+  document.body.style.overflow = '';
+}
+
+modalClose.addEventListener('click', closeModal);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+/* ============================================
+   CUSTOM CURSOR
+   ============================================ */
+const cursor = document.getElementById('cursor');
+const cursorDot = document.getElementById('cursorDot');
+let mouseX = 0, mouseY = 0;
+let cursorX = 0, cursorY = 0;
+
+document.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  cursorDot.style.left = mouseX + 'px';
+  cursorDot.style.top = mouseY + 'px';
+});
+
+function animateCursor() {
+  cursorX += (mouseX - cursorX) * 0.12;
+  cursorY += (mouseY - cursorY) * 0.12;
+  cursor.style.left = cursorX + 'px';
+  cursor.style.top = cursorY + 'px';
+  requestAnimationFrame(animateCursor);
+}
+animateCursor();
+
+// Hover effect
+document.addEventListener('mouseover', e => {
+  if (e.target.closest('a, button, .masonry-item, .skill-tag, .filter-btn')) {
+    cursor.classList.add('hover');
+  }
+});
+document.addEventListener('mouseout', e => {
+  if (e.target.closest('a, button, .masonry-item, .skill-tag, .filter-btn')) {
+    cursor.classList.remove('hover');
+  }
+});
+
+/* ============================================
+   SCROLL REVEAL
+   ============================================ */
+function observeRevealElements() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal:not(.visible)').forEach(el => observer.observe(el));
+}
+observeRevealElements();
+
+/* ============================================
+   PARALLAX TEXT
+   ============================================ */
+const parallaxEls = document.querySelectorAll('.parallax-text');
+
+function updateParallax() {
+  const scrollY = window.scrollY;
+  parallaxEls.forEach(el => {
+    const speed = parseFloat(el.dataset.speed) || 0.05;
+    const rect = el.getBoundingClientRect();
+    const center = rect.top + rect.height / 2;
+    const offset = (window.innerHeight / 2 - center) * speed;
+    el.style.transform = `translateY(${offset}px)`;
+  });
+}
+
+window.addEventListener('scroll', () => {
+  requestAnimationFrame(updateParallax);
+}, { passive: true });
+
+/* ============================================
+   MOBILE NAV
+   ============================================ */
+const navToggle = document.getElementById('navToggle');
+const navLinks = document.getElementById('navLinks');
+
+navToggle.addEventListener('click', () => {
+  navToggle.classList.toggle('active');
+  navLinks.classList.toggle('open');
+});
+
+navLinks.querySelectorAll('a').forEach(link => {
+  link.addEventListener('click', () => {
+    navToggle.classList.remove('active');
+    navLinks.classList.remove('open');
+  });
+});
+
+/* ============================================
+   LOADER
+   ============================================ */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('loader').classList.add('hidden');
+  }, 1800);
+});
+
+/* ============================================
+   SMOOTH SCROLL FOR NAV
+   ============================================ */
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+</script>
+</body>
+</html>
