@@ -14,6 +14,18 @@
    ============================================ */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* Media protection — prevent save/drag/long-press */
+img, video {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  pointer-events: auto;
+}
+
 :root {
   --bg-primary: #0B0B0B;
   --bg-secondary: #111111;
@@ -1359,7 +1371,7 @@ img, video { display: block; max-width: 100%; }
 
 <script>
 /* ============================================
-   PROJECT DATA — 26 PROJECTS, ALL LOCAL ASSETS
+   PROJECT DATA — 27 PROJECTS, ALL LOCAL ASSETS
    File paths match actual folder structure exactly
    ============================================ */
 const projects = [
@@ -1497,7 +1509,7 @@ const projects = [
       { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/01剧本.png' },
       { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/02分镜脚本.png' },
       { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/03角色设定 男.png' },
-      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/04角色设定 女.png' },
+      { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/04角色设定 女.jpg' },
       { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/05场景设定.jpg' },
       { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/06分镜1.jpg' },
       { type: 'image', src: 'images/01AIGC/05原创AI漫剧制作演示/07分镜2.jpg' },
@@ -1622,7 +1634,7 @@ const projects = [
     ]
   },
 
-  /* ──────── 04 IP潮玩 (2) ──────── */
+  /* ──────── 04 IP潮玩 (3) ──────── */
   {
     id: 13,
     title: 'IP风格转换',
@@ -1661,6 +1673,22 @@ const projects = [
       { type: 'video', src: 'images/04IP潮玩/02IP设计/04video.mp4' }
     ]
   },
+  {
+    id: 27,
+    title: 'LIFEBLOOM 生花',
+    category: 'ip',
+    categoryLabel: 'IP潮玩',
+    year: '2026',
+    cover: 'images/04IP潮玩/03LIFEBLOOM/cover.jpg',
+    coverType: 'image',
+    desc: '原创潮玩 IP 全案设计。以鸢尾花为人格隐喻打造品牌「LIFE BLOOM 生花」与核心角色 Green Iris（绿鸢尾），完成从世界观概念、品牌 LOGO、角色三视图设定、表情包延展到周边物料的完整视觉体系。',
+    bg: '「不必成为最耀眼的花，Bloom in Your Own Way」——以花朵象征不同肤色、个性与时间风味的年轻女孩，构建具有情绪共鸣的潮玩 IP，探索从形象设计到商业落地的完整路径。',
+    workflow: '世界观概念 → 品牌 LOGO 设计 → 角色形象设定 → 三视图/色彩规范 → 表情包延展 → 周边物料设计 → 全案视觉统一',
+    gallery: [
+      { type: 'image', src: 'images/04IP潮玩/03LIFEBLOOM/cover.jpg' },
+      { type: 'image', src: 'images/04IP潮玩/03LIFEBLOOM/02全案.jpg' }
+    ]
+  },
 
   /* ──────── 05 游戏设计 (7) ──────── */
   {
@@ -1669,14 +1697,14 @@ const projects = [
     category: 'game',
     categoryLabel: '游戏设计',
     year: '2025',
-    cover: 'images/05游戏设计/01角色设计/01Goddess and Jewelry Series/cover.png',
+    cover: 'images/05游戏设计/01角色设计/01Goddess and Jewelry Series/cover.jpg',
     coverType: 'image',
     desc: '游戏角色概念设计系列。从角色设定到动态姿势，探索不同风格的游戏角色视觉方案，为游戏项目提供高品质的角色设计。',
     bg: '游戏角色设计需要兼顾美观性与功能性。项目在角色造型、动态姿势和视觉表现上进行了深入探索。',
     workflow: '角色概念 → 动态姿势设计 → 线稿精修 → 上色渲染 → 细节调整 → 最终输出',
     gallery: [
-      { type: 'image', src: 'images/05游戏设计/01角色设计/01Goddess and Jewelry Series/cover.png' },
-      { type: 'image', src: 'images/05游戏设计/01角色设计/01Goddess and Jewelry Series/01.png' }
+      { type: 'image', src: 'images/05游戏设计/01角色设计/01Goddess and Jewelry Series/cover.jpg' },
+      { type: 'image', src: 'images/05游戏设计/01角色设计/01Goddess and Jewelry Series/01.jpg' }
     ]
   },
   {
@@ -2055,6 +2083,21 @@ document.addEventListener('mouseout', e => {
     cursor.classList.remove('hover');
   }
 });
+
+/* ============================================
+   MEDIA PROTECTION — block right-click save & drag
+   ============================================ */
+document.addEventListener('contextmenu', e => {
+  if (e.target && (e.target.tagName === 'IMG' || e.target.tagName === 'VIDEO')) {
+    e.preventDefault();
+  }
+}, false);
+
+document.addEventListener('dragstart', e => {
+  if (e.target && (e.target.tagName === 'IMG' || e.target.tagName === 'VIDEO')) {
+    e.preventDefault();
+  }
+}, false);
 
 /* ============================================
    SCROLL REVEAL
