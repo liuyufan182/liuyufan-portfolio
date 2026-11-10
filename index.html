@@ -27,16 +27,16 @@ img, video {
 }
 
 :root {
-  --bg-primary: #0B0B0B;
-  --bg-secondary: #111111;
-  --bg-tertiary: #161616;
-  --text-primary: #F5F2EA;
-  --text-secondary: rgba(245, 242, 234, 0.6);
-  --text-muted: rgba(245, 242, 234, 0.35);
-  --accent: #C7A56A;
-  --accent-dim: rgba(199, 165, 106, 0.15);
-  --border: rgba(245, 242, 234, 0.08);
-  --border-light: rgba(245, 242, 234, 0.15);
+  --bg-primary: #101010;
+  --bg-secondary: #181818;
+  --bg-tertiary: #1F1F1F;
+  --text-primary: #F2F0EA;
+  --text-secondary: #929292;
+  --text-muted: rgba(146, 146, 146, 0.7);
+  --accent: #A58A55;
+  --accent-dim: rgba(165, 138, 85, 0.15);
+  --border: #333333;
+  --border-light: #4A4A4A;
   --font-display: 'Cormorant Garamond', 'Georgia', serif;
   --font-body: 'Inter', 'Noto Sans SC', -apple-system, sans-serif;
   --font-cn: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -185,14 +185,32 @@ img, video { display: block; max-width: 100%; }
 .nav {
   position: fixed;
   top: 0; left: 0; right: 0;
-  padding: 32px 48px;
+  padding: 28px 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   z-index: 1000;
-  mix-blend-mode: difference;
-  transition: opacity 0.5s ease;
+  transition: background-color 0.4s ease, padding 0.4s ease, box-shadow 0.4s ease, backdrop-filter 0.4s ease;
 }
+.nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(8,8,8,0.78) 0%, rgba(8,8,8,0.35) 55%, rgba(8,8,8,0) 100%);
+  opacity: 1;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.nav.scrolled {
+  background-color: rgba(16,16,16,0.72);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  backdrop-filter: blur(16px) saturate(120%);
+  box-shadow: 0 1px 0 var(--border-light);
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+.nav.scrolled::before { opacity: 0; }
 
 .nav-logo {
   font-family: var(--font-display);
@@ -201,6 +219,7 @@ img, video { display: block; max-width: 100%; }
   letter-spacing: 0.35em;
   text-transform: uppercase;
   color: var(--text-primary);
+  text-shadow: 0 1px 10px rgba(0,0,0,0.65);
 }
 
 .nav-links {
@@ -217,6 +236,7 @@ img, video { display: block; max-width: 100%; }
   color: var(--text-primary);
   position: relative;
   padding-bottom: 2px;
+  text-shadow: 0 1px 10px rgba(0,0,0,0.65);
 }
 
 .nav-links a::after {
@@ -287,10 +307,10 @@ img, video { display: block; max-width: 100%; }
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg,
-    rgba(11,11,11,0.3) 0%,
-    rgba(11,11,11,0.1) 30%,
-    rgba(11,11,11,0.4) 70%,
-    rgba(11,11,11,0.95) 100%
+    rgba(16,16,16,0.3) 0%,
+    rgba(16,16,16,0.1) 30%,
+    rgba(16,16,16,0.4) 70%,
+    rgba(16,16,16,0.95) 100%
   );
   z-index: 1;
 }
@@ -554,7 +574,7 @@ img, video { display: block; max-width: 100%; }
 .masonry-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 40%, rgba(11,11,11,0.9) 100%);
+  background: linear-gradient(180deg, transparent 40%, rgba(16,16,16,0.9) 100%);
   opacity: 0;
   transition: opacity 0.5s ease;
   display: flex;
@@ -753,7 +773,10 @@ img, video { display: block; max-width: 100%; }
   font-size: 0.8rem;
   font-weight: 300;
   color: var(--text-secondary);
+  transition: color 0.4s ease;
 }
+
+.about-list li:hover { color: var(--text-primary); }
 
 .about-list li span:last-child {
   font-size: 0.65rem;
@@ -845,12 +868,12 @@ img, video { display: block; max-width: 100%; }
 
 .contact-email {
   display: inline-block;
-  font-size: 0.8rem;
+  font-size: clamp(1rem, 2.4vw, 1.7rem);
   font-weight: 300;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.04em;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-light);
-  padding-bottom: 4px;
+  padding-bottom: 8px;
   transition: all 0.4s ease;
   margin-bottom: 60px;
 }
@@ -913,132 +936,194 @@ img, video { display: block; max-width: 100%; }
 }
 
 /* ============================================
-   PROJECT DETAIL MODAL
+   PROJECT DETAIL (full-page experience)
    ============================================ */
 .modal {
   position: fixed;
   inset: 0;
   z-index: 5000;
   background: var(--bg-primary);
-  overflow-y: auto;
-  transform: translateY(100%);
-  transition: transform 0.7s var(--ease-out);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.6s var(--ease-out), visibility 0.6s;
 }
+.modal.active { opacity: 1; visibility: visible; }
 
-.modal.active {
-  transform: translateY(0);
-}
-
-.modal-close {
+.detail-progress {
   position: fixed;
-  top: 32px; right: 48px;
-  z-index: 5001;
-  background: none;
-  border: 1px solid var(--border-light);
-  width: 48px; height: 48px;
+  top: 0; left: 0;
+  height: 2px; width: 0%;
+  background: var(--accent);
+  z-index: 5020;
+  transition: width 0.1s linear;
+}
+
+.detail-topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 5010;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-family: var(--font-body);
-  font-size: 0.7rem;
-  font-weight: 300;
-  letter-spacing: 0.1em;
+  justify-content: space-between;
+  padding: 20px clamp(20px, 4vw, 48px);
+  background: linear-gradient(180deg, rgba(16,16,16,0.9) 0%, rgba(16,16,16,0) 100%);
+  pointer-events: none;
+}
+.detail-topbar > * { pointer-events: auto; }
+.detail-back, .detail-close {
+  background: none;
+  border: 1px solid var(--border-light);
   color: var(--text-primary);
-  transition: all 0.4s ease;
-}
-
-.modal-close:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-/* FIXED: modal cover — no object-fit:cover, height:auto, preserve aspect ratio */
-.modal-cover-img,
-.modal-cover-video {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  opacity: 0.8;
-  display: block;
-}
-
-.modal-body {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 80px 48px 120px;
-}
-
-.modal-category {
-  font-size: 0.6rem;
+  font-family: var(--font-body);
+  font-size: 0.68rem;
   font-weight: 300;
-  letter-spacing: 0.4em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 20px;
+  padding: 12px 20px;
+  transition: border-color 0.4s ease, color 0.4s ease;
 }
-
-.modal-title {
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 4vw, 3.5rem);
-  font-weight: 300;
-  line-height: 1.15;
-  margin-bottom: 12px;
-}
-
-.modal-year {
-  font-size: 0.7rem;
-  font-weight: 300;
-  letter-spacing: 0.2em;
+.detail-back:hover, .detail-close:hover { border-color: var(--accent); color: var(--accent); }
+.detail-index {
+  font-size: 0.62rem;
+  letter-spacing: 0.3em;
   color: var(--text-muted);
-  margin-bottom: 48px;
-}
-
-.modal-section {
-  margin-bottom: 48px;
-}
-
-.modal-section h4 {
-  font-size: 0.6rem;
-  font-weight: 300;
-  letter-spacing: 0.4em;
   text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 20px;
-  padding-bottom: 12px;
+}
+.detail-index b { color: var(--accent); font-weight: 400; }
+
+.detail-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.detail {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 120px clamp(20px, 4vw, 48px) 40px;
+}
+
+/* Opening */
+.detail-opening { margin-bottom: clamp(48px, 8vw, 96px); }
+.detail-eyebrow {
+  display: flex; align-items: center; gap: 14px;
+  font-size: 0.62rem; letter-spacing: 0.35em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 22px;
+}
+.detail-eyebrow .sep { width: 28px; height: 1px; background: var(--border-light); }
+.detail-eyebrow .yr { color: var(--text-muted); }
+.detail-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 6vw, 5rem);
+  font-weight: 300; line-height: 1.05; letter-spacing: 0.01em;
+  margin-bottom: 18px;
+}
+.detail-sub {
+  font-size: 0.9rem; font-weight: 300; line-height: 1.8;
+  color: var(--text-secondary); max-width: 660px; margin-bottom: 40px;
+}
+.detail-hero { width: 100%; }
+
+/* Sections */
+.detail-section { margin-bottom: clamp(48px, 8vw, 96px); }
+.detail-section-head {
+  display: flex; align-items: baseline; gap: 16px;
+  margin-bottom: 28px; padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
 }
-
-.modal-section p {
-  font-size: 0.85rem;
-  font-weight: 300;
-  line-height: 1.9;
-  color: var(--text-secondary);
+.detail-section-num { font-size: 0.62rem; letter-spacing: 0.2em; color: var(--accent); font-family: var(--font-body); }
+.detail-section-title {
+  font-family: var(--font-display); font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 400; letter-spacing: 0.02em;
 }
 
-/* FIXED: modal gallery — no forced aspect-ratio, no object-fit:cover */
-.modal-gallery {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-top: 48px;
+.detail-fields { display: grid; grid-template-columns: 1fr; gap: 26px; }
+.detail-field-label {
+  font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 8px;
+}
+.detail-field-value {
+  font-size: 0.92rem; font-weight: 300; line-height: 1.95; color: var(--text-secondary);
+  max-width: 760px;
 }
 
-.modal-gallery img,
-.modal-gallery video {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  transition: opacity 0.4s ease;
+/* Media layouts — all contain, height auto, preserve ratio */
+.detail-hero img,
+.media-single img,
+.media-wide img,
+.media-pair img,
+.media-grid img {
+  width: 100%; height: auto; object-fit: contain; display: block;
+}
+.detail-hero video,
+.media-single video,
+.media-wide video,
+.media-pair video,
+.media-grid video {
+  width: 100%; height: auto; max-height: 78vh; object-fit: contain; display: block; margin: 0 auto;
+}
+.detail-media.video-tall { display: flex; justify-content: center; }
+.detail-media.video-tall video {
+  width: auto; height: auto; max-width: 100%; max-height: 78vh; margin: 0 auto;
+}
+.media-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.media-portrait { display: flex; justify-content: center; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+.media-portrait img, .media-portrait video {
+  height: clamp(420px, 68vh, 760px); width: auto; max-width: 100%; object-fit: contain; display: block;
 }
 
-.modal-gallery img:hover,
-.modal-gallery video:hover {
-  opacity: 0.8;
+.detail-media { position: relative; }
+.detail-media[data-src] { cursor: zoom-in; }
+.detail-media[data-src] img { transition: opacity 0.4s ease; }
+.detail-media[data-src] img:hover { opacity: 0.85; }
+.detail-media video { cursor: default; }
+.detail-caption {
+  margin-top: 10px; font-size: 0.66rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-muted);
 }
 
-.modal-gallery > :first-child {
-  grid-column: 1 / -1;
+/* Prev / Next nav */
+.detail-nav {
+  max-width: 1200px; margin: 0 auto;
+  padding: 40px clamp(20px, 4vw, 48px) 120px;
+  border-top: 1px solid var(--border);
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
 }
+.detail-nav-item {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 20px; border: 1px solid var(--border);
+  transition: border-color 0.4s ease;
+}
+.detail-nav-item:hover { border-color: var(--accent); }
+.detail-nav-label { font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent); }
+.detail-nav-body { display: flex; align-items: center; gap: 16px; }
+.detail-nav-thumb { width: 80px; height: 80px; overflow: hidden; flex-shrink: 0; }
+.detail-nav-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.detail-nav-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 400; }
+.detail-nav-item.next { text-align: right; align-items: flex-end; }
+.detail-nav-item.next .detail-nav-body { flex-direction: row-reverse; }
+
+/* Lightbox */
+.lightbox {
+  position: fixed; inset: 0; z-index: 6000;
+  background: rgba(8,8,8,0.96);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; visibility: hidden; transition: opacity 0.4s ease, visibility 0.4s;
+}
+.lightbox.active { opacity: 1; visibility: visible; }
+.lightbox-stage { max-width: 92vw; max-height: 88vh; display: flex; align-items: center; justify-content: center; }
+.lightbox-stage img { max-width: 92vw; max-height: 88vh; width: auto; height: auto; object-fit: contain; }
+.lightbox-close, .lightbox-prev, .lightbox-next {
+  position: fixed; background: none; border: none; color: var(--text-primary);
+  font-size: 2rem; line-height: 1; opacity: 0.6; transition: opacity 0.3s ease; padding: 12px;
+}
+.lightbox-close:hover, .lightbox-prev:hover, .lightbox-next:hover { opacity: 1; }
+.lightbox-close { top: 24px; right: 32px; }
+.lightbox-prev { left: 16px; top: 50%; transform: translateY(-50%); }
+.lightbox-next { right: 16px; top: 50%; transform: translateY(-50%); }
 
 /* ============================================
    SCROLL ANIMATIONS
@@ -1107,11 +1192,39 @@ img, video { display: block; max-width: 100%; }
   .portfolio-header { flex-direction: column; align-items: flex-start; gap: 24px; }
   .portfolio-filter { flex-wrap: wrap; gap: 16px; }
 
-  .modal-body { padding: 48px 24px 80px; }
-  .modal-gallery { grid-template-columns: 1fr; }
+  .detail { padding: 96px 20px 32px; }
+  .detail-fields { gap: 20px; }
+  .media-pair { grid-template-columns: 1fr; }
+  .media-grid { grid-template-columns: 1fr 1fr; }
+  .media-portrait img, .media-portrait video { height: clamp(360px, 55vh, 560px); }
+  .detail-nav { grid-template-columns: 1fr; padding: 32px 20px 80px; }
+  .detail-nav-item.next { text-align: left; align-items: flex-start; }
+  .detail-nav-item.next .detail-nav-body { flex-direction: row; }
+  .detail-topbar { padding: 14px 16px; }
+  .detail-index { display: none; }
 
   .footer { flex-direction: column; gap: 16px; text-align: center; }
   .contact-socials { flex-wrap: wrap; gap: 24px; }
+}
+
+/* ============================================
+   REDUCED MOTION
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .cursor, .cursor-dot { display: none !important; }
+  .grain { display: none !important; }
 }
 </style>
 </head>
@@ -1341,32 +1454,26 @@ img, video { display: block; max-width: 100%; }
   </footer>
 </section>
 
-<!-- ==================== PROJECT MODAL ==================== -->
-<div class="modal" id="modal">
-  <button class="modal-close" id="modalClose">CLOSE</button>
-  <div id="modalCoverWrap"></div>
-  <div class="modal-body">
-    <div class="modal-category" id="modalCategory"></div>
-    <h2 class="modal-title" id="modalTitle"></h2>
-    <div class="modal-year" id="modalYear"></div>
-
-    <div class="modal-section">
-      <h4>Project Overview</h4>
-      <p id="modalDesc"></p>
-    </div>
-
-    <div class="modal-section">
-      <h4>Creative Background</h4>
-      <p id="modalBg"></p>
-    </div>
-
-    <div class="modal-section">
-      <h4>AI Workflow</h4>
-      <p id="modalWorkflow"></p>
-    </div>
-
-    <div class="modal-gallery" id="modalGallery"></div>
+<!-- ==================== PROJECT DETAIL ==================== -->
+<div class="modal" id="modal" aria-hidden="true">
+  <div class="detail-progress" id="detailProgress"></div>
+  <div class="detail-topbar">
+    <button class="detail-back" id="detailBack">&larr; All Works</button>
+    <div class="detail-index" id="detailIndex"></div>
+    <button class="detail-close" id="modalClose">Close</button>
   </div>
+  <div class="detail-scroll" id="detailScroll">
+    <article class="detail" id="detailContent"></article>
+    <nav class="detail-nav" id="detailNav"></nav>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" aria-hidden="true">
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close">&times;</button>
+  <button class="lightbox-prev" id="lightboxPrev" aria-label="Previous">&#8249;</button>
+  <button class="lightbox-next" id="lightboxNext" aria-label="Next">&#8250;</button>
+  <div class="lightbox-stage"><img id="lightboxImg" src="" alt=""></div>
 </div>
 
 <script>
@@ -1606,6 +1713,34 @@ const projects = [
       { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/08模特展示.png' },
       { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/09模特展示.jpg' },
       { type: 'video', src: 'images/03电商设计/02首饰类电商物料设计/10video.mp4' }
+    ],
+    hero: { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/cover.jpg' },
+    sections: [
+      { kind: 'text', title: 'Project Overview', fields: [
+        { label: '概述', value: '为某耳饰品牌设计全套电商视觉物料。包含产品展示、模特图、细节图及宣传视频，打造高端精致的线上购物体验。（虚拟项目）' },
+        { label: '背景', value: '首饰品类电商需要在有限的展示空间内传递品牌价值与产品质感。通过精心设计的视觉物料提升产品的线上呈现效果。' }
+      ]},
+      { kind: 'media', title: '产品展示 · Product', layout: 'grid', items: [
+        { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/01产品展示.png' },
+        { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/03产品展示.png' },
+        { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/04产品展示.png' },
+        { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/05产品展示.png' }
+      ]},
+      { kind: 'media', title: '产品三视图 · Turnaround', layout: 'single', items: [
+        { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/02产品三视图.png' }
+      ]},
+      { kind: 'media', title: '模特展示 · Model', layout: 'pair', items: [
+        { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/06模特展示.png' },
+        { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/07模特展示.png' },
+        { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/08模特展示.png' },
+        { type: 'image', src: 'images/03电商设计/02首饰类电商物料设计/09模特展示.jpg' }
+      ]},
+      { kind: 'media', title: '宣传视频 · Film', layout: 'wide', items: [
+        { type: 'video', src: 'images/03电商设计/02首饰类电商物料设计/10video.mp4' }
+      ]},
+      { kind: 'text', title: 'AI Workflow', fields: [
+        { label: '创作流程', value: '品牌风格定义 → 产品拍摄方案 → AI辅助修图 → 详情页设计 → AI制作模特图 → 宣传视频制作' }
+      ]}
     ]
   },
   {
@@ -1986,7 +2121,7 @@ function renderMasonry(filter = 'all') {
       item.addEventListener('mouseleave', () => { try { vid.pause(); vid.currentTime = 0; } catch(e){} });
     }
 
-    item.addEventListener('click', () => openModal(p));
+    item.addEventListener('click', () => openProject(p.id));
     masonry.appendChild(item);
   });
 
@@ -2011,61 +2146,332 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
    ============================================ */
 const modal = document.getElementById('modal');
 const modalClose = document.getElementById('modalClose');
-const modalCoverWrap = document.getElementById('modalCoverWrap');
+const detailContent = document.getElementById('detailContent');
+const detailNav = document.getElementById('detailNav');
+const detailScroll = document.getElementById('detailScroll');
+const detailProgress = document.getElementById('detailProgress');
+const detailIndex = document.getElementById('detailIndex');
+const detailBack = document.getElementById('detailBack');
 
-function openModal(project) {
-  // Cover — use first gallery item
-  const firstItem = project.gallery[0];
-  if (firstItem.type === 'video') {
-    modalCoverWrap.innerHTML = `<video class="modal-cover-video" src="${firstItem.src}" autoplay muted loop playsinline></video>`;
-  } else {
-    modalCoverWrap.innerHTML = `<img class="modal-cover-img" src="${firstItem.src}" alt="${project.title}">`;
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightboxImg');
+const lightboxPrev = document.getElementById('lightboxPrev');
+const lightboxNext = document.getElementById('lightboxNext');
+
+let currentProjectId = null;
+let lbGroup = [];
+let lbIndex = 0;
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Collect all clickable image sources for the current project's lightbox group
+function collectImageSources(p) {
+  const out = [];
+  const pushImg = (it) => { if (it && it.type !== 'video' && it.src) out.push(it.src); };
+  if (p.sections && p.sections.length) {
+    if (p.hero) pushImg(p.hero);
+    p.sections.forEach(sec => {
+      if (sec.kind === 'media') (sec.items || []).forEach(pushImg);
+    });
+  } else if (p.gallery) {
+    p.gallery.forEach(pushImg);
   }
+  return out;
+}
 
-  document.getElementById('modalCategory').textContent = project.categoryLabel;
-  document.getElementById('modalTitle').textContent = project.title;
-  document.getElementById('modalYear').textContent = project.year;
-  document.getElementById('modalDesc').textContent = project.desc;
-  document.getElementById('modalBg').textContent = project.bg;
-  document.getElementById('modalWorkflow').textContent = project.workflow;
+// Build one media node — image (click to zoom) or video (native controls), keeps ratio
+function mediaNode(item) {
+  const wrap = document.createElement('div');
+  wrap.className = 'detail-media';
+  if (item.type === 'video') {
+    const vid = document.createElement('video');
+    vid.src = item.src;
+    vid.controls = true;
+    vid.muted = true;
+    vid.playsInline = true;
+    vid.preload = 'metadata';
+    vid.addEventListener('loadedmetadata', () => {
+      if (vid.videoHeight > vid.videoWidth) wrap.classList.add('video-tall');
+    });
+    wrap.appendChild(vid);
+  } else {
+    const img = document.createElement('img');
+    img.src = item.src;
+    img.alt = item.caption || '';
+    img.loading = 'lazy';
+    wrap.dataset.src = item.src;
+    wrap.addEventListener('click', () => {
+      const idx = lbGroup.indexOf(item.src);
+      if (idx >= 0) openLightbox(idx);
+    });
+    wrap.appendChild(img);
+  }
+  if (item.caption) {
+    const cap = document.createElement('div');
+    cap.className = 'detail-caption';
+    cap.textContent = item.caption;
+    wrap.appendChild(cap);
+  }
+  return wrap;
+}
 
-  // Gallery — skip first item (already used as cover)
-  const gallery = document.getElementById('modalGallery');
-  gallery.innerHTML = '';
-  project.gallery.slice(1).forEach(item => {
-    if (item.type === 'video') {
-      const vid = document.createElement('video');
-      vid.src = item.src;
-      vid.controls = true;
-      vid.muted = true;
-      vid.playsInline = true;
-      vid.alt = project.title;
-      gallery.appendChild(vid);
-    } else {
-      const img = document.createElement('img');
-      img.src = item.src;
-      img.alt = project.title;
-      img.loading = 'lazy';
-      gallery.appendChild(img);
-    }
+// Curated section renderer (kind: 'text' | 'media')
+function renderSection(sec, num) {
+  const el = document.createElement('section');
+  el.className = 'detail-section';
+  if (sec.title) {
+    const head = document.createElement('div');
+    head.className = 'detail-section-head';
+    head.innerHTML = `<span class="detail-section-num">${String(num).padStart(2, '0')}</span>` +
+      `<h3 class="detail-section-title">${esc(sec.title)}</h3>`;
+    el.appendChild(head);
+  }
+  if (sec.kind === 'text') {
+    const fields = document.createElement('div');
+    fields.className = 'detail-fields';
+    (sec.fields || []).forEach(f => {
+      if (!f.value) return; // never render empty / fabricated fields
+      const fd = document.createElement('div');
+      fd.innerHTML = `<div class="detail-field-label">${esc(f.label)}</div>` +
+        `<div class="detail-field-value">${esc(f.value)}</div>`;
+      fields.appendChild(fd);
+    });
+    el.appendChild(fields);
+  } else if (sec.kind === 'media') {
+    const box = document.createElement('div');
+    box.className = 'media-' + (sec.layout || 'single');
+    (sec.items || []).forEach(it => box.appendChild(mediaNode(it)));
+    el.appendChild(box);
+  }
+  return el;
+}
+
+// Controlled keyword→section-title mapper (specific before general)
+function classifyImage(name) {
+  const lower = String(name || '').toLowerCase();
+  const test = (re) => re.test(name) || re.test(lower);
+  const order = [
+    [/三视图/, '三视图 · Turnaround'],
+    [/logo/, '标识 · Logo'],
+    [/照片/, '产品照片 · Photo'],
+    [/精修/, '质感精修 · Retouch'],
+    [/详情页/, '详情页 · Detail'],
+    [/主图/, '主图 · Hero Image'],
+    [/海报/, '海报 · Poster'],
+    [/模特/, '模特展示 · Model'],
+    [/线稿|lineart/i, '线稿 · Lineart'],
+    [/成图/, '成图 · Render'],
+    [/最终|效果/, '最终效果 · Final'],
+    [/控制|素材|打标|垫图|depth|deepth|prompt|openpose/i, '控制与调试 · Controls'],
+    [/分镜/, '分镜 · Storyboard'],
+    [/关键帧/, '关键帧 · Keyframe'],
+    [/剧本|脚本/, '脚本 · Script'],
+    [/角色/, '角色设定 · Character'],
+    [/场景/, '场景设定 · Scene'],
+    [/折页/, '折页 · Brochure'],
+    [/手册|目录|前言|品牌故事|品牌主张|品牌基本|释义|口号|英文|制图|尺寸|安全距离|标识|组合|正确|错误/, '品牌手册 · Brandbook'],
+    [/门头|前台|教室|空间/, '空间 · Space'],
+    [/道旗|易拉宝|桁架|banner|H5|公众号|页眉|页尾|DPI|cm|px|板式|横幅/i, '延展物料 · Collateral'],
+    [/产品/, '产品展示 · Product'],
+    [/原图|原稿|草稿|右侧身|左侧身/, '原稿 · Source'],
+  ];
+  for (let i = 0; i < order.length; i++) {
+    if (test(order[i][0])) return order[i][1];
+  }
+  return '作品 · Works';
+}
+
+// Auto layout for projects without curated sections — uses ONLY real existing data
+function fallbackSections(p) {
+  const secs = [];
+
+  const overview = [];
+  if (p.desc) overview.push({ label: '概述', value: p.desc });
+  if (p.bg) overview.push({ label: '背景', value: p.bg });
+  if (overview.length) secs.push({ kind: 'text', title: 'Project Overview', fields: overview });
+
+  const gallery = p.gallery || [];
+  const rest = gallery.slice(1); // gallery[0] is already the opening hero
+  const videos = rest.filter(it => it.type === 'video');
+
+  const buckets = [];
+  const byTitle = {};
+  rest.forEach(it => {
+    if (it.type === 'video') return;
+    const name = (it.src || '').split('/').pop();
+    const title = classifyImage(name);
+    if (!byTitle[title]) { byTitle[title] = { kind: 'media', title, layout: 'grid', items: [] }; buckets.push(byTitle[title]); }
+    byTitle[title].items.push(it);
+  });
+  buckets.forEach(b => {
+    const n = b.items.length;
+    b.layout = n === 1 ? 'single' : (n === 2 ? 'pair' : 'grid');
+    secs.push(b);
   });
 
+  if (videos.length) secs.push({ kind: 'media', title: '宣传视频 · Film', layout: videos.length === 1 ? 'wide' : 'single', items: videos });
+
+  if (p.workflow) secs.push({ kind: 'text', title: 'AI Workflow', fields: [{ label: '创作流程', value: p.workflow }] });
+  return secs;
+}
+
+function buildOpening(p) {
+  const wrap = document.createElement('div');
+  wrap.className = 'detail-opening';
+
+  const eyebrow = document.createElement('div');
+  eyebrow.className = 'detail-eyebrow';
+  eyebrow.innerHTML = `<span>${esc(p.categoryLabel)}</span>` +
+    `<span class="sep"></span><span class="yr">${esc(p.year)}</span>`;
+  wrap.appendChild(eyebrow);
+
+  const title = document.createElement('h1');
+  title.className = 'detail-title';
+  title.textContent = p.title;
+  wrap.appendChild(title);
+
+  if (p.desc) {
+    const sub = document.createElement('p');
+    sub.className = 'detail-sub';
+    sub.textContent = p.desc;
+    wrap.appendChild(sub);
+  }
+
+  const heroItem = p.hero || (p.gallery && p.gallery[0]);
+  if (heroItem) {
+    const hero = document.createElement('div');
+    hero.className = 'detail-hero';
+    hero.appendChild(mediaNode(heroItem));
+    wrap.appendChild(hero);
+  }
+  return wrap;
+}
+
+function buildNav(p) {
+  detailNav.innerHTML = '';
+  const pos = projects.findIndex(x => x.id === p.id);
+  const prev = projects[(pos - 1 + projects.length) % projects.length];
+  const next = projects[(pos + 1) % projects.length];
+  const mk = (proj, dir) => {
+    const a = document.createElement('a');
+    a.className = 'detail-nav-item ' + dir;
+    a.href = '#project/' + proj.id;
+    a.dataset.goto = proj.id;
+    const thumb = proj.cover || (proj.gallery && proj.gallery[0] && proj.gallery[0].src) || '';
+    a.innerHTML =
+      `<span class="detail-nav-label">${dir === 'prev' ? 'Previous Project' : 'Next Project'}</span>` +
+      `<span class="detail-nav-body">` +
+        (thumb ? `<span class="detail-nav-thumb"><img src="${thumb}" alt="${esc(proj.title)}"></span>` : '') +
+        `<span class="detail-nav-title">${esc(proj.title)}</span>` +
+      `</span>`;
+    return a;
+  };
+  detailNav.appendChild(mk(prev, 'prev'));
+  detailNav.appendChild(mk(next, 'next'));
+}
+
+function openProject(id, pushHistory = true) {
+  const p = projects.find(x => String(x.id) === String(id));
+  if (!p) return;
+  currentProjectId = p.id;
+  lbGroup = collectImageSources(p);
+
+  detailContent.innerHTML = '';
+  detailContent.appendChild(buildOpening(p));
+  const sections = (p.sections && p.sections.length) ? p.sections : fallbackSections(p);
+  sections.forEach((sec, i) => detailContent.appendChild(renderSection(sec, i + 1)));
+
+  buildNav(p);
+
+  const pos = projects.findIndex(x => x.id === p.id);
+  detailIndex.innerHTML = `<b>${String(pos + 1).padStart(2, '0')}</b> / ${String(projects.length).padStart(2, '0')}`;
+
+  detailScroll.scrollTop = 0;
+  updateProgress();
+
   modal.classList.add('active');
+  modal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
+
+  if (pushHistory) {
+    const url = '#project/' + p.id;
+    if (location.hash !== url) history.pushState({ projectId: p.id }, '', url);
+  }
 }
 
-function closeModal() {
+function closeDetail() {
+  detailContent.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (e) {} });
+  closeLightbox();
   modal.classList.remove('active');
-  // Stop any playing videos in modal
-  modalCoverWrap.querySelectorAll('video').forEach(v => { v.pause(); v.src = ''; });
-  document.getElementById('modalGallery').querySelectorAll('video').forEach(v => { v.pause(); v.src = ''; });
+  modal.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
+  currentProjectId = null;
+  if (location.hash.indexOf('#project/') === 0) {
+    history.pushState('', document.title, location.pathname + location.search + '#works');
+  }
 }
 
-modalClose.addEventListener('click', closeModal);
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal();
+/* Lightbox */
+function openLightbox(idx) {
+  if (!lbGroup.length) return;
+  lbIndex = (idx + lbGroup.length) % lbGroup.length;
+  lightboxImg.src = lbGroup[lbIndex];
+  lightbox.classList.add('active');
+  lightbox.setAttribute('aria-hidden', 'false');
+  const multi = lbGroup.length > 1;
+  lightboxPrev.style.display = multi ? '' : 'none';
+  lightboxNext.style.display = multi ? '' : 'none';
+}
+function closeLightbox() {
+  lightbox.classList.remove('active');
+  lightbox.setAttribute('aria-hidden', 'true');
+  lightboxImg.src = '';
+}
+
+/* Reading progress */
+function updateProgress() {
+  const max = detailScroll.scrollHeight - detailScroll.clientHeight;
+  const pct = max > 0 ? (detailScroll.scrollTop / max) * 100 : 0;
+  detailProgress.style.width = pct + '%';
+}
+detailScroll.addEventListener('scroll', updateProgress, { passive: true });
+
+/* Controls */
+modalClose.addEventListener('click', closeDetail);
+detailBack.addEventListener('click', closeDetail);
+lightboxClose.addEventListener('click', closeLightbox);
+lightboxPrev.addEventListener('click', e => { e.stopPropagation(); openLightbox(lbIndex - 1); });
+lightboxNext.addEventListener('click', e => { e.stopPropagation(); openLightbox(lbIndex + 1); });
+lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+detailNav.addEventListener('click', e => {
+  const a = e.target.closest('[data-goto]');
+  if (a) { e.preventDefault(); openProject(a.dataset.goto); }
 });
+
+document.addEventListener('keydown', e => {
+  if (lightbox.classList.contains('active')) {
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') openLightbox(lbIndex - 1);
+    if (e.key === 'ArrowRight') openLightbox(lbIndex + 1);
+    return;
+  }
+  if (modal.classList.contains('active') && e.key === 'Escape') closeDetail();
+});
+
+/* Deep links: refresh / direct #project/<id> */
+function initHash() {
+  const m = location.hash.match(/^#project\/(.+)$/);
+  if (m) openProject(m[1], false);
+}
+window.addEventListener('popstate', () => {
+  const m = location.hash.match(/^#project\/(.+)$/);
+  if (m) openProject(m[1], false);
+  else if (modal.classList.contains('active')) closeDetail();
+});
+initHash();
 
 /* ============================================
    CUSTOM CURSOR
@@ -2151,8 +2557,16 @@ function updateParallax() {
   });
 }
 
+const siteNav = document.querySelector('.nav');
+function updateNavState() {
+  if (!siteNav) return;
+  siteNav.classList.toggle('scrolled', window.scrollY > 40);
+}
+updateNavState();
+
 window.addEventListener('scroll', () => {
   requestAnimationFrame(updateParallax);
+  updateNavState();
 }, { passive: true });
 
 /* ============================================
