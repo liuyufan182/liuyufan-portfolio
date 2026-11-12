@@ -2589,12 +2589,41 @@ navLinks.querySelectorAll('a').forEach(link => {
 
 /* ============================================
    LOADER
+   Robust reveal: the splash MUST disappear even if the
+   hero video, an external font, or a large image hangs
+   or fails (so the window 'load' event may never fire).
    ============================================ */
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    document.getElementById('loader').classList.add('hidden');
-  }, 1800);
-});
+(function () {
+  var loader = document.getElementById('loader');
+  if (!loader) return;
+
+  var revealed = false;
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    loader.classList.add('hidden');
+    loader.style.pointerEvents = 'none';
+    // Fully detach the overlay after the fade so nothing can block the page.
+    // Second safety net in case transitionend never fires.
+    setTimeout(function () {
+      if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+    }, 1000);
+  }
+
+  var reduce = window.matchMedia &&
+               window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var linger  = reduce ? 150 : 700;   // graceful beat before the fade-out
+  var hardCap = reduce ? 1200 : 2600; // absolute max the splash may cover content
+
+  // (a) Normal path: reveal shortly after the whole page has loaded.
+  window.addEventListener('load', function () { setTimeout(reveal, linger); });
+
+  // (b) Hard timeout: fires no matter what, so a stuck resource can't trap users.
+  setTimeout(reveal, hardCap);
+
+  // (c) If loading already finished before this script ran, reveal promptly.
+  if (document.readyState === 'complete') { setTimeout(reveal, linger); }
+})();
 
 /* ============================================
    SMOOTH SCROLL FOR NAV
